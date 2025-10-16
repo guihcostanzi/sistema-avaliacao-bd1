@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Página Não Encontrada</title>
+    <link href="/static/css/base.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 style="color: #d9534f;">Erro 404 - Página Não Encontrada</h1>
+        <p>O recurso que você está procurando não existe ou foi movido.</p>
+        
+        {% if usuario %}
+            <p>Clique no botão abaixo para retornar à página principal.</p>
+            <a href="/home"><button>Voltar para a Home</button></a>
+        {% else %}
+             <p>Clique no botão abaixo para ir para a página de login.</p>
+            <a href="/login"><button>Ir para Login</button></a>
+        {% endif %}
+    </div>
+</body>
+</html>

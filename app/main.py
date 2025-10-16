@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import Depends
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # Importa a instância centralizada do motor de templates
 from app.templating import templates as templates_instance
@@ -52,6 +53,25 @@ app.add_middleware(
     secret_key="xK9mP2vL8qR5nW7jE_______45>opse<22______fG9hJ2kL5nM8qR1wE4rT7yU0iO3pA6sD9f"
 )
 
+# Adicionando tratamento para 404 (rota não encontrada)
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+   
+    # Verifica se a exceção é um erro 404 (Not Found)
+    if exc.status_code == 404:
+        # Verifica se o usuário está logado (procurando na sessão)
+        usuario_logado = request.session.get('usuario')
+
+        if not usuario_logado:
+            # Se não estiver logado, redireciona para a página de login.
+            return RedirectResponse(url="/login")
+        else:
+            # Se estiver logado, mostra a página de erro 404 amigável.
+            context = {"request": request, "usuario": usuario_logado}
+            return templates.TemplateResponse("404_fallback.html", context, status_code=404)
+    
+    # Para qualquer outro erro HTTP, mantém o comportamento padrão.
+    return RedirectResponse(url="/login")
 
 # Configuração de arquivos estáticos e templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
