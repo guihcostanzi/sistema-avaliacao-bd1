@@ -1,0 +1,42 @@
+# Arquivo para ignorar arquivos e pastas no Git
+
+# Ambientes Virtuais
+# Nunca envie seu ambiente virtual para o repositório!
+venv/
+*.venv
+.venv
+env/
+.env/
+
+# Arquivos de Cache e Temporários do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Arquivos de Configuração de Editores e IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Arquivos Sensíveis
+# CRUCIAL: Nunca envie suas senhas e chaves de API!
+.env
+*.env
+
+# Arquivos de Banco de Dados local (se usar SQLite)
+*.sqlite3
+*.db
+
+# Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Pastas de Build e Distribuição
+build/
+dist/
+
+# Logs
+*.log
