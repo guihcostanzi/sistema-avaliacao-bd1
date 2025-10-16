@@ -8,7 +8,7 @@ from fastapi import Depends
 from starlette.middleware.sessions import SessionMiddleware
 
 # Importa a dependência de segurança, que verifica se o usuário está autenticado
-from app.dependencies import get_usuario_autenticado
+from app.session_dependencies import get_usuario_autenticado
 
 # Importação de routers (colocando 'app.' pois estão dentro da pasta app)
 from app.routers import usuarios, authentication
