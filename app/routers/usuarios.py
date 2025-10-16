@@ -20,15 +20,6 @@ def criar_usuario(usuario: usuario_schema.UsuarioCreate, db: Session = Depends(g
     query_checar_email = text("SELECT id FROM usuario WHERE email = :email")
     if db.execute(query_checar_email, {"email": usuario.email}).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
-    
-    # --- INÍCIO DA NOSSA DEPURAÇÃO ---
-    # Vamos imprimir o valor, o tipo e o tamanho da senha que a função recebeu.
-    print("--- DADOS DE DEPURAÇÃO DA SENHA ---")
-    print(f"VALOR RECEBIDO: {usuario.senha}")
-    print(f"TIPO DA VARIÁVEL: {type(usuario.senha)}")
-    print(f"TAMANHO DA STRING: {len(usuario.senha)}")
-    print("------------------------------------")
-    # --- FIM DA DEPURAÇÃO ---
 
     # Gera o hash da senha antes de salvar
     senha_hash = security.get_senha_hash(usuario.senha)
