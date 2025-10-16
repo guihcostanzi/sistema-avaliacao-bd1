@@ -23,7 +23,7 @@ app = FastAPI(
 # Adiciona o middleware de sessão ao aplicativo
 app.add_middleware(
     SessionMiddleware,
-    secret_key="aaasdada"
+    secret_key="xK9mP2vL8qR5nW7jE_______45>opse<22______fG9hJ2kL5nM8qR1wE4rT7yU0iO3pA6sD9f"
 )
 
 # Configuração de arquivos estáticos e templates
