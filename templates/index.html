@@ -13,8 +13,9 @@
         <hr>
         <div class="user">
             <h1>Usuário Logado:</h1>
-            <p>Username: {{usuario.username}}</p>
-            <p>Role: {{usuario.role}}</p>
+            <p>ID: {{usuario.id}}</p>
+            <p>Username: {{usuario.nome}}</p>
+            <p>Email: {{usuario.email}}</p>
         </div>
         <a href="{{ url_for('logout') }}">Sair</a>
     </div>

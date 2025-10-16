@@ -21,11 +21,6 @@ __pycache__/
 *.sublime-project
 *.sublime-workspace
 
-# Arquivos Sensíveis
-# CRUCIAL: Nunca envie suas senhas e chaves de API!
-.env
-*.env
-
 # Arquivos de Banco de Dados local (se usar SQLite)
 *.sqlite3
 *.db

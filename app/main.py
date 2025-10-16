@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.dependencies import get_usuario_autenticado
 
 # Importação de routers (colocando 'app.' pois estão dentro da pasta app)
-from app.routers import avaliacoes, authentication
+from app.routers import usuarios, authentication
 
 # --- Configuração da Aplicação ---
 app = FastAPI(
@@ -23,7 +23,7 @@ app = FastAPI(
 # Adiciona o middleware de sessão ao aplicativo
 app.add_middleware(
     SessionMiddleware,
-    secret_key="###aasdada>>>^)-8hjnb(^<<<a_ajdasidasidb¨¨¨5$@!!!3213223"
+    secret_key="aaasdada"
 )
 
 # Configuração de arquivos estáticos e templates
@@ -34,14 +34,14 @@ templates = Jinja2Templates(directory="templates")
 
 app.include_router(
     authentication.router, 
-    prefix="",        # Adiciona '/api' na frente de todas as rotas do router
-    tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
+    prefix="",
+    tags=["Autenticação"]   # Agrupa estas rotas na documentação /docs
 )
 
 app.include_router(
-    avaliacoes.router, 
-    prefix="/api",        # Adiciona '/api' na frente de todas as rotas do router
-    tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
+    usuarios.router, 
+    prefix="/usuarios",        
+    tags=["Usuarios"]   
 )
 
 # --- Endpoints da Página Principal (Frontend) ---
