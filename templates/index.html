@@ -10,6 +10,13 @@
     <div class="container">
         <h1>{{ welcome_message }}</h1>
         <p>Esta página está sendo servida pelo FastAPI e renderizada com Jinja2.</p>
+        <hr>
+        <div class="user">
+            <h1>Usuário Logado:</h1>
+            <p>Username: {{usuario.username}}</p>
+            <p>Role: {{usuario.role}}</p>
+        </div>
+        <a href="{{ url_for('logout') }}">Sair</a>
     </div>
 </body>
 </html>

@@ -17,6 +17,10 @@ def pagina_login(request: Request):
 @router.post("/login", response_class=HTMLResponse)
 def processar_login(request: Request, usuario: str = Form(), senha: str = Form()):
     if usuario == "admin" and senha == "senha123":
+
+        # Armazena informações do usuário na sessão
+        request.session['usuario'] = {'username': usuario, 'role': 'admin'}
+
         return RedirectResponse(url="/home", status_code=302)
     else:
         context = {
@@ -24,3 +28,12 @@ def processar_login(request: Request, usuario: str = Form(), senha: str = Form()
             "error_message": "Usuário ou senha inválidos."
         }
         return templates.TemplateResponse("login.html", context)
+
+# Rota GET para logout
+@router.get("/logout")
+def logout(request: Request):
+
+    # Limpa a sessão
+    request.session.clear()
+
+    return RedirectResponse(url="/login", status_code=302)
