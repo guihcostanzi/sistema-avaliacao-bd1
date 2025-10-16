@@ -20,20 +20,19 @@ templates = Jinja2Templates(directory="templates")
 # --- Incluir os Roteadores ---
 
 app.include_router(
+    authentication.router, 
+    prefix="",        # Adiciona '/api' na frente de todas as rotas do router
+    tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
+)
+
+app.include_router(
     avaliacoes.router, 
     prefix="/api",        # Adiciona '/api' na frente de todas as rotas do router
     tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
 )
 
-app.include_router(
-    authentication.router, 
-    prefix="/auth",        # Adiciona '/api' na frente de todas as rotas do router
-    tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
-)
-
-
 # --- Endpoints da Página Principal (Frontend) ---
-@app.get("/", response_class=HTMLResponse)
+@app.get("/home", response_class=HTMLResponse)
 def read_root(request: Request):
     context = {
         "request": request,

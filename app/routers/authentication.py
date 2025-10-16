@@ -17,7 +17,7 @@ def pagina_login(request: Request):
 @router.post("/login", response_class=HTMLResponse)
 def processar_login(request: Request, usuario: str = Form(), senha: str = Form()):
     if usuario == "admin" and senha == "senha123":
-        return RedirectResponse(url="/", status_code=302)
+        return RedirectResponse(url="/home", status_code=302)
     else:
         context = {
             "request": request,
