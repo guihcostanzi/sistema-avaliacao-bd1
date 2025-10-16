@@ -1,3 +1,286 @@
-.form-group{
-    margin-bottom: 10px;
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Fundo principal */
+body {
+    background: #2c2c2c;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Lado esquerdo - 66% da tela */
+.left-side {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: #2c2c2c;
+    min-height: 100vh;
+}
+
+.content-left {
+    max-width: 600px;
+    width: 100%;
+}
+
+/* Container da frase animada */
+.typing-container {
+    margin-bottom: 2rem;
+}
+
+.typing-text {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+    font-size: 3rem;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+    line-height: 1.2;
+}
+
+/* Cursor piscando */
+.cursor {
+    display: inline-block;
+    width: 4px;
+    height: 4rem;
+    background-color: #f1f1f1;
+    margin-left: 6px;
+    animation: blink 1s step-end infinite;
+    vertical-align: baseline;
+}
+
+@keyframes blink {
+    0%, 50% { 
+        background-color: #ffffff; 
+        opacity: 1; 
+    }
+    51%, 100% { 
+        background-color: transparent; 
+        opacity: 0; 
+    }
+}
+
+/* Texto descritivo */
+.description {
+    margin-top: 2rem;
+}
+
+.description p {
+    color: #b0b0b0;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    max-width: 700px;
+}
+
+/* Lado direito - 33% da tela */
+.right-side {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #2c2c2c;
+    min-height: 100vh;
+}
+
+/* Container do formulário - mais compacto */
+.login-container {
+    background: rgba(255, 255, 255, 0.05); /* Mais transparente */
+    backdrop-filter: blur(20px); /* Mais blur para compensar */
+    border: 1px solid rgba(255, 255, 255, 0.15); /* Borda mais sutil */
+    border-radius: 8px; /* Menos arredondado (era 16px) */
+    padding: 35px 30px;
+    width: 100%;
+    max-width: 350px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Título */
+.login-title {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 25px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Grupos de input */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    color: white;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+}
+
+/* Inputs com estética glass e menos arredondados */
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px; /* Menos arredondado */
+    background: rgba(255, 255, 255, 0.15); /* Mais transparente */
+    backdrop-filter: blur(10px); /* Efeito glass */
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    color: white; /* Texto branco */
+}
+
+.form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.6); /* Placeholder mais sutil */
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #007bff;
+    background: rgba(255, 255, 255, 0.25); /* Ligeiramente mais opaco no foco */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+/* Botão de login - também menos arredondado */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    border-radius: 4px; /* Menos arredondado */
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+}
+
+.login-btn:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+/* Links adicionais */
+.login-links {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.login-links a {
+    color: #87ceeb;
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin: 0 8px;
+    transition: color 0.3s ease;
+}
+
+.login-links a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/* Mensagem de erro */
+.error-message {
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    text-align: center;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+/* Responsividade */
+@media (max-width: 991.98px) {
+    .left-side, .right-side {
+        min-height: auto;
+    }
+    
+    .left-side {
+        padding: 2rem;
+        min-height: 50vh;
+    }
+    
+    .right-side {
+        padding: 1.5rem;
+        min-height: 50vh;
+    }
+    
+    .typing-text {
+        font-size: 3rem;
+        text-align: center;
+    }
+    
+    .cursor {
+        height: 3rem;
+    }
+    
+    .description p {
+        text-align: center;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .typing-text {
+        font-size: 2.5rem;
+    }
+    
+    .cursor {
+        height: 2.5rem;
+    }
+    
+    .description p {
+        font-size: 1rem;
+    }
+    
+    .login-container {
+        padding: 25px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .left-side, .right-side {
+        padding: 1rem;
+    }
+    
+    .typing-text {
+        font-size: 2rem;
+    }
+    
+    .cursor {
+        height: 2rem;
+        width: 3px;
+    }
+    
+    .description p {
+        font-size: 0.95rem;
+    }
+    
+    .login-title {
+        font-size: 1.6rem;
+    }
+    
+    .login-links {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
 }
