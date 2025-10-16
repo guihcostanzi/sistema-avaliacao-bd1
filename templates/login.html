@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tela de Login</title>
+    
+    <link href="/static/css/base.css" rel="stylesheet">
+    <link href="/static/css/pages/login.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        
+        <form action="{{ url_for('processar_login')}}" method="post">
+            
+            <div class="form-row">
+                
+                <div class="form-group">
+                    <label for="usuario">Usuário:</label>
+                    <input type="text" id="usuario" name="usuario" placeholder="Digite seu usuário" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha:</label>
+                    <input type="senha" id="senha" name="senha" placeholder="Digite sua senha" required>
+                </div>
+
+                <button type="submit">Entrar</button>
+            </div>
+        </form>
+        
+        {% if error_message %}
+            <p style="color: red; margin-top: 1.5rem;">{{ error_message }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

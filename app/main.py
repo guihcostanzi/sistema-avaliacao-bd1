@@ -3,8 +3,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Importação de router (colocando 'app.' pois está dentro da pasta app)
-from app.routers import avaliacoes 
+# Importação de routers (colocando 'app.' pois estão dentro da pasta app)
+from app.routers import avaliacoes, authentication
 
 # --- Configuração da Aplicação ---
 app = FastAPI(
@@ -19,12 +19,18 @@ templates = Jinja2Templates(directory="templates")
 
 # --- Incluir os Roteadores ---
 
-# Esta linha adiciona todas as rotas de 'avaliacoes.py' à sua aplicação principal
 app.include_router(
     avaliacoes.router, 
     prefix="/api",        # Adiciona '/api' na frente de todas as rotas do router
     tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
 )
+
+app.include_router(
+    authentication.router, 
+    prefix="/auth",        # Adiciona '/api' na frente de todas as rotas do router
+    tags=["Avaliações"]   # Agrupa estas rotas na documentação /docs
+)
+
 
 # --- Endpoints da Página Principal (Frontend) ---
 @app.get("/", response_class=HTMLResponse)
