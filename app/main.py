@@ -93,7 +93,7 @@ app.include_router(
 
 # --- Endpoints da Página Principal (Frontend) ---
 @app.get("/home", response_class=HTMLResponse)
-def read_root(request: Request, usuario: dict = Depends(get_usuario_autenticado)):
+def pagina_inicial(request: Request, usuario: dict = Depends(get_usuario_autenticado)):
     context = {
         "request": request,
         "usuario": usuario,

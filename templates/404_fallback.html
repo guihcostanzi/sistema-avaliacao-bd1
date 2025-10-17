@@ -2,21 +2,86 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Página Não Encontrada</title>
-    <link href="/static/css/base.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/pages/404_fallback.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1 style="color: #d9534f;">Erro 404 - Página Não Encontrada</h1>
-        <p>O recurso que você está procurando não existe ou foi movido.</p>
-        
-        {% if usuario %}
-            <p>Clique no botão abaixo para retornar à página principal.</p>
-            <a href="/home"><button>Voltar para a Home</button></a>
-        {% else %}
-             <p>Clique no botão abaixo para ir para a página de login.</p>
-            <a href="/login"><button>Ir para Login</button></a>
-        {% endif %}
+    <div class="container-fluid h-100">
+        <div class="row h-100">
+            <!-- Lado esquerdo - Ícone e animação -->
+            <div class="col-lg-8 left-side">
+                <div class="content-left">
+                    <div class="error-animation">
+                        <div class="error-number">
+                            <span class="number-4">4</span>
+                            <span class="number-0">0</span>
+                            <span class="number-4">4</span>
+                        </div>
+                    </div>
+                    <div class="error-description">
+                        <h2>Oops! Página não encontrada</h2>
+                        <p>O recurso que você está procurando não existe ou foi movido para outro local.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lado direito - Card de ações -->
+            <div class="col-lg-4 right-side">
+                <div class="action-container">
+                    <div class="error-icon">
+                        <i class="bi bi-compass"></i>
+                    </div>
+                    
+                    <h3>Vamos te ajudar!</h3>
+                    <p class="help-text">Escolha uma das opções abaixo para continuar navegando:</p>
+                    
+                    <div class="action-buttons">
+                        {% if usuario %}
+                            <a href="{{url_for('pagina_inicial')}}" class="btn btn-primary btn-action">
+                                <i class="bi bi-house-fill me-2"></i>
+                                Voltar para a Home
+                            </a>
+                            <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-action">
+                                <i class="bi bi-people me-2"></i>
+                                Logout
+                            </a>
+                        {% else %}
+                            <a href="{{url_for('login')}}" class="btn btn-primary btn-action">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                Ir para Login
+                            </a>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="help-links">
+                        <a href="#" class="help-link">
+                            <i class="bi bi-question-circle me-1"></i>
+                            Central de Ajuda
+                        </a>
+                        <a href="#" class="help-link">
+                            <i class="bi bi-envelope me-1"></i>
+                            Contato
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Animação dos números 404
+        document.addEventListener('DOMContentLoaded', function() {
+            const numbers = document.querySelectorAll('.error-number span');
+            
+            numbers.forEach((number, index) => {
+                setTimeout(() => {
+                    number.style.animation = 'bounceIn 0.6s ease-out forwards';
+                }, index * 200);
+            });
+        });
+    </script>
 </body>
 </html>
