@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 # Define os campos básicos que todo usuário terá
@@ -10,6 +11,11 @@ class UsuarioBase(BaseModel):
 class UsuarioCreate(UsuarioBase):
     senha: str
 
+# Usado para atualizar um usuário, todos os campos são opcionais
+class UsuarioUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[EmailStr] = None
+    senha: Optional[str] = None
 
 # Usado para retornar dados de um usuário (sem a senha)
 class Usuario(UsuarioBase):
