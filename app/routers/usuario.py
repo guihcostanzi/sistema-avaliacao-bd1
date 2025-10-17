@@ -1,49 +1,32 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, status, HTTPException, Query
+from typing import Optional
+from fastapi import APIRouter, Depends, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 # Importa os schemas que criamos e a conexão com o banco
-from app.schemas import usuario as usuario_schema
 from app.core import security
-from app.db.database import SessionLocal
 from app.db.database import get_db
 
 # Cria o router específico para usuários
 router = APIRouter()
 
-@router.post("/", response_model=usuario_schema.Usuario, status_code=status.HTTP_201_CREATED)
-def criar_usuario(usuario: usuario_schema.UsuarioCreate, db: Session = Depends(get_db)):
-    """
-    Endpoint para criar um novo usuário.
-    """
-    # Verifica se o e-mail já existe para evitar duplicatas
-    query_checar_email = text("SELECT id FROM usuario WHERE email = :email")
-    if db.execute(query_checar_email, {"email": usuario.email}).first():
-        raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
+# Configurar templates
+templates = Jinja2Templates(directory="templates")
 
-    # Gera o hash da senha antes de salvar
-    senha_hash = security.get_senha_hash(usuario.senha)
-    
-    # Insere o novo usuário no banco de dados
-    query_cadastro = text("INSERT INTO usuario (nome, email, senha) VALUES (:nome, :email, :senha) RETURNING id")
-    result = db.execute(query_cadastro, {"nome": usuario.nome, "email": usuario.email, "senha": senha_hash})
-    db.commit()
-    
-    # Obtém o ID do novo usuário criado
-    novo_id = result.scalar_one()
-    
-    # Retorna o usuário criado, seguindo o schema de resposta segura
-    return usuario_schema.Usuario(id=novo_id, nome=usuario.nome, email=usuario.email)
-
-@router.get("/", response_model=List[usuario_schema.Usuario])
-def listar_usuarios(
-    passo: int = Query(0, ge=0, description="Número de registros para pular"),
-    limite: int = Query(100, ge=1, le=1000, description="Número máximo de registros"),
-    nome: Optional[str] = Query(None, description="Filtrar por nome"),
-    email: Optional[str] = Query(None, description="Filtrar por email"),
+@router.get("/", response_class=HTMLResponse, name="pagina_usuarios")
+def pagina_usuarios(
+    request: Request,
+    passo: int = 0,
+    limite: int = 10,
+    nome: Optional[str] = None,
+    email: Optional[str] = None,
+    success: Optional[str] = None,
+    error: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    
     # Query base usando 1 = 1 para facilitar a adição de condições
     query_base = "SELECT id, nome, email FROM usuario WHERE 1=1"
     parametros = {}
@@ -67,89 +50,141 @@ def listar_usuarios(
     result = db.execute(query, parametros)
     usuarios = result.fetchall()
     
-    # Converte para lista de objetos Usuario
-    return [
-        usuario_schema.Usuario(id=row.id, nome=row.nome, email=row.email)
-        for row in usuarios
-    ]
-
-@router.get("/{usuario_id}", response_model=usuario_schema.Usuario)
-def obter_usuario(usuario_id: int, db: Session = Depends(get_db)):
-   
-    # Select pelo ID do usuário
-    query = text("SELECT id, nome, email FROM usuario WHERE id = :id")
-    result = db.execute(query, {"id": usuario_id}).first()
+    # Conta o total de usuários na tabela
+    query_total = text("SELECT COUNT(*) as total FROM usuario")
+    total_usuarios = db.execute(query_total).scalar()
     
-    if not result:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
-    
-    return usuario_schema.Usuario(id=result.id, nome=result.nome, email=result.email)
+    # Calcula paginação
+    total_paginas = (total_usuarios + limite - 1) // limite if total_usuarios > 0 else 1
+    pagina_atual = (passo // limite) + 1
 
-@router.put("/{usuario_id}", response_model=usuario_schema.Usuario)
-def atualizar_usuario(
-    usuario_id: int, 
-    usuario_update: usuario_schema.UsuarioUpdate, 
+    contexto ={
+        "request": request,
+        "usuarios": usuarios,
+        "total_usuarios": total_usuarios,
+        "pagina_atual": pagina_atual,
+        "total_paginas": total_paginas,
+        "limite": limite,
+        "filtro_nome": nome or "",
+        "filtro_email": email or "",
+        "has_previous": passo > 0,
+        "has_next": pagina_atual < total_paginas,
+        "previous_page": max(1, pagina_atual - 1),
+        "next_page": min(total_paginas, pagina_atual + 1),
+        "success_message": success,
+        "error_message": error
+    }
+    
+    return templates.TemplateResponse("usuarios.html", contexto)
+
+@router.post("/criar")
+def criar_usuario(
+    nome: str = Form(...),
+    email: str = Form(...),
+    senha: str = Form(...),
     db: Session = Depends(get_db)
 ):
-  
-    # Verifica se o usuário existe
-    query_verificar = text("SELECT id FROM usuario WHERE id = :id")
-    if not db.execute(query_verificar, {"id": usuario_id}).first():
-        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
-    
-    # Verifica se o novo e-mail já existe em outro usuário
-    if usuario_update.email:
+    try:
+        # Verifica se o e-mail já existe para evitar duplicatas
+        query_checar_email = text("SELECT id FROM usuario WHERE email = :email")
+        if db.execute(query_checar_email, {"email": email}).first():
+            return RedirectResponse(
+                url="/usuarios/?error=E-mail já cadastrado.", 
+                status_code=303
+            )
+        
+        # Gera o hash da senha antes de salvar
+        senha_hash = security.get_senha_hash(senha)
+        
+        # Insere o novo usuário no banco de dados
+        query_cadastro = text("INSERT INTO usuario (nome, email, senha) VALUES (:nome, :email, :senha)")
+        db.execute(query_cadastro, {"nome": nome, "email": email, "senha": senha_hash})
+        db.commit()
+        
+        return RedirectResponse(
+            url="/usuarios/?success=Usuário criado com sucesso!", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url="/usuarios/?error=Erro ao criar usuário.", 
+            status_code=303
+        )
+
+@router.post("/editar/{usuario_id}")
+def editar_usuario(
+    usuario_id: int,
+    nome: str = Form(...),
+    email: str = Form(...),
+    senha: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verifica se o usuário existe
+        query_verificar = text("SELECT id FROM usuario WHERE id = :id")
+        if not db.execute(query_verificar, {"id": usuario_id}).first():
+            return RedirectResponse(
+                url="/usuarios/?error=Usuário não encontrado!", 
+                status_code=303
+            )
+        
+        # Verifica se o novo e-mail já existe em outro usuário
         query_checar_email = text("SELECT id FROM usuario WHERE email = :email AND id != :id")
-        if db.execute(query_checar_email, {"email": usuario_update.email, "id": usuario_id}).first():
-            raise HTTPException(status_code=400, detail="E-mail já cadastrado para outro usuário.")
-    
-    # Constrói a query de atualização dinamicamente
-    campos_update = []
-    parametros = {"id": usuario_id}
-    
-    if usuario_update.nome is not None:
-        campos_update.append("nome = :nome")
-        parametros["nome"] = usuario_update.nome
-    
-    if usuario_update.email is not None:
-        campos_update.append("email = :email")
-        parametros["email"] = usuario_update.email
-    
-    if usuario_update.senha is not None:
-        campos_update.append("senha = :senha")
-        parametros["senha"] = security.get_senha_hash(usuario_update.senha)
-    
-    if not campos_update:
-        raise HTTPException(status_code=400, detail="Nenhum campo fornecido para atualização.")
-    
-    # Executa a atualização via UPDATE
-    query_update = text(f"UPDATE usuario SET {', '.join(campos_update)} WHERE id = :id")
-    db.execute(query_update, parametros)
-    db.commit()
-    
-    # Retorna o usuário atualizado
-    return obter_usuario(usuario_id, db)
+        if db.execute(query_checar_email, {"email": email, "id": usuario_id}).first():
+            return RedirectResponse(
+                url="/usuarios/?error=E-mail já cadastrado para outro usuário!", 
+                status_code=303
+            )
+        
+        # Atualiza o usuário
+        if senha and senha.strip():  # Se senha foi fornecida e não está vazia
+            senha_hash = security.get_senha_hash(senha)
+            query_update = text("UPDATE usuario SET nome = :nome, email = :email, senha = :senha WHERE id = :id")
+            db.execute(query_update, {"nome": nome, "email": email, "senha": senha_hash, "id": usuario_id})
+        else:
+            query_update = text("UPDATE usuario SET nome = :nome, email = :email WHERE id = :id")
+            db.execute(query_update, {"nome": nome, "email": email, "id": usuario_id})
+        
+        db.commit()
+        
+        return RedirectResponse(
+            url="/usuarios/?success=Usuário atualizado com sucesso!", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url="/usuarios/?error=Erro ao atualizar usuário!", 
+            status_code=303
+        )
 
-@router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
-def deletar_usuario(usuario_id: int, db: Session = Depends(get_db)):
- 
-    # Verifica se o usuário existe
-    query_verificar = text("SELECT id FROM usuario WHERE id = :id")
-    if not db.execute(query_verificar, {"id": usuario_id}).first():
-        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
-    
-    # Deleta o usuário
-    query_delete = text("DELETE FROM usuario WHERE id = :id")
-    db.execute(query_delete, {"id": usuario_id})
-    db.commit()
-    
-    return None
-
-@router.get("/count/total")
-def contar_usuarios(db: Session = Depends(get_db)):
-    
-    # Conta o total de usuários na tabela
-    query = text("SELECT COUNT(*) as total FROM usuario")
-    result = db.execute(query).scalar()
-    
-    return {"total": result}
+@router.post("/deletar/{usuario_id}")
+def deletar_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verifica se o usuário existe
+        query_verificar = text("SELECT id FROM usuario WHERE id = :id")
+        if not db.execute(query_verificar, {"id": usuario_id}).first():
+            return RedirectResponse(
+                url="/usuarios/?error=Usuário não encontrado!", 
+                status_code=303
+            )
+        
+        # Deleta o usuário
+        query_delete = text("DELETE FROM usuario WHERE id = :id")
+        db.execute(query_delete, {"id": usuario_id})
+        db.commit()
+        
+        return RedirectResponse(
+            url="/usuarios/?success=Usuário excluído com sucesso!", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url="/usuarios/?error=Erro ao excluir usuário!", 
+            status_code=303
+        )
