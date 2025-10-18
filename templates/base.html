@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HypeForm{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/pages/base.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h4 class="sidebar-title">
+                    <i class="bi bi-gear-fill me-2"></i>HypeForm
+                </h4>
+            </div>
+            
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="/home" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+                        <i class="bi bi-house-door me-2"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/usuarios/" class="nav-link {% if '/usuarios/' in request.url.path %}active{% endif %}">
+                        <i class="bi bi-people me-2"></i>
+                        <span>Usuários</span>
+                    </a>
+                </li>
+                
+                <!-- Separador -->
+                <li class="nav-divider"></li>
+                
+                <!-- Área do usuário -->
+                <li class="nav-item mt-auto">
+                    <a href="/logout" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-right me-2"></i>
+                        <span>Sair</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Conteúdo Principal -->
+        <div id="content" class="content">
+            <!-- Toggle Sidebar (Mobile) -->
+            <button type="button" id="sidebarCollapse" class="btn btn-outline-secondary d-md-none mb-3">
+                <i class="bi bi-list"></i>
+            </button>
+
+            <!-- Alertas Globais -->
+            {% block alerts %}
+            {% if success_message %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>{{ success_message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            {% if error_message %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error_message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            {% endblock %}
+
+            <!-- Conteúdo da Página -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle sidebar no mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarCollapse = document.getElementById('sidebarCollapse');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarCollapse) {
+                sidebarCollapse.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
