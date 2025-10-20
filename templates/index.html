@@ -1,23 +1,173 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-   <link href="/static/css/base.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container">
-        <h1>{{ welcome_message }}</h1>
-        <p>Esta página está sendo servida pelo FastAPI e renderizada com Jinja2.</p>
-        <hr>
-        <div class="user">
-            <h1>Usuário Logado:</h1>
-            <p>ID: {{usuario.id}}</p>
-            <p>Username: {{usuario.nome}}</p>
-            <p>Email: {{usuario.email}}</p>
-        </div>
-        <a href="{{ url_for('logout') }}">Sair</a>
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Sistema{% endblock %}
+
+{% block content %}
+<!-- Header de Boas-vindas -->
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-house-door-fill me-2 text-primary"></i>{{ welcome_message }}
+        </h1>
+        <p class="text-muted mb-0">Painel de Navegação</p>
     </div>
-</body>
-</html>
+    <div class="d-flex align-items-center">
+        <span class="badge bg-success me-2">UEL</span>
+        <small class="text-muted">Universidade de Londrina</small>
+    </div>
+</div>
+
+<!-- Cards de Informações do Usuário -->
+<div class="row g-3 my-4">
+    <div class="col-xl-4 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Usuário Logado
+                        </div>
+                        <div class="h6 mb-0 font-weight-bold text-gray-800">{{ usuario.nome }}</div>
+                        <div class="text-xs text-muted">ID: #{{ usuario.id }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="avatar-lg bg-primary rounded-circle d-flex align-items-center justify-content-center">
+                            <i class="bi bi-person text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Email
+                        </div>
+                        <div class="h6 mb-0 font-weight-bold text-gray-800">{{ usuario.email }}</div>
+                        <div class="text-xs text-success">Verificado</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="avatar-lg bg-success rounded-circle d-flex align-items-center justify-content-center">
+                            <i class="bi bi-envelope text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Status da Sessão
+                        </div>
+                        <div class="h6 mb-0 font-weight-bold text-gray-800">Ativa</div>
+                        <div class="text-xs text-info">Conectado via FastAPI</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="avatar-lg bg-info rounded-circle d-flex align-items-center justify-content-center">
+                            <i class="bi bi-shield-check text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Ações Rápidas -->
+<div class="row g-4 mb-4">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-lightning-fill me-1"></i>Ações Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="/usuarios/" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
+                            <i class="bi bi-people me-2"></i>
+                            <div class="text-start">
+                                <div class="fw-bold">Gerenciar Usuários</div>
+                                <small class="text-muted">Criar, editar e excluir usuários</small>
+                            </div>
+                        </a>
+                    </div>
+                     <div class="col-md-6">
+                        <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center py-3" disabled>
+                            <i class="bi bi-folder-fill me-2"></i>
+                            <div class="text-start">
+                                <div class="fw-bold">Projetos</div>
+                                <small class="text-muted">Em breve...</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-md-12">
+                        <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center py-3" disabled>
+                            <i class="bi bi-bar-chart me-2"></i>
+                            <div class="text-start">
+                                <div class="fw-bold">Relatórios</div>
+                                <small class="text-muted">Em breve...</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-info-circle me-1"></i>Informações do Sistema
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-xs font-weight-bold text-uppercase text-muted">Tecnologia</span>
+                        <span class="badge bg-primary">FastAPI</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-xs font-weight-bold text-uppercase text-muted">Template Engine</span>
+                        <span class="badge bg-info">Jinja2</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-xs font-weight-bold text-uppercase text-muted">Frontend</span>
+                        <span class="badge bg-success">Bootstrap 5</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-xs font-weight-bold text-uppercase text-muted">Banco de Dados</span>
+                        <span class="badge bg-warning text-dark">PostgreSQL</span>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>
+                        Sistema funcionando perfeitamente
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<link href="/static/css/pages/index.css" rel="stylesheet">
+{% endblock %}

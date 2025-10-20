@@ -98,6 +98,6 @@ def pagina_inicial(request: Request, usuario: dict = Depends(get_usuario_autenti
         "request": request,
         "usuario": usuario,
         "title": "Sistema de Avaliações",
-        "welcome_message": "Bem-vindo ao nosso Sistema de Avaliações!"
+        "welcome_message": "Bem-vindo!"
     }
     return templates.TemplateResponse("index.html", context)
