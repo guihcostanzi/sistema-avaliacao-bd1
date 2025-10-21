@@ -95,7 +95,7 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <a href="/usuarios/" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
+                        <a href="{{url_for('pagina_usuarios')}}" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
                             <i class="bi bi-people me-2"></i>
                             <div class="text-start">
                                 <div class="fw-bold">Gerenciar Usuários</div>
@@ -104,13 +104,13 @@
                         </a>
                     </div>
                      <div class="col-md-6">
-                        <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center py-3" disabled>
+                        <a href="{{url_for('listar_projetos')}}" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
                             <i class="bi bi-folder-fill me-2"></i>
                             <div class="text-start">
-                                <div class="fw-bold">Projetos</div>
-                                <small class="text-muted">Em breve...</small>
+                                <div class="fw-bold">Gerenciar Projetos</div>
+                                <small class="text-muted">Criar, editar e excluir projetos</small>
                             </div>
-                        </button>
+                        </a>
                     </div>
                     <div class="col-md-12">
                         <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center py-3" disabled>
