@@ -1,35 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Projetos - Sistema{% endblock %}
+{% block title %}Entidades - {{ projeto.nome }}{% endblock %}
 
 {% block content %}
-<!-- Header -->
 <div class="d-flex justify-content-between align-items-center py-4 border-bottom">
     <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/projetos/">Projetos</a></li>
+                <li class="breadcrumb-item active">{{ projeto.nome }}</li>
+            </ol>
+        </nav>
         <h1 class="h3 mb-1 text-gray-800">
-            <i class="bi bi-folder-fill me-2 text-primary"></i>Meus Projetos
+            <i class="bi bi-diagram-3 me-2 text-success"></i>Entidades
         </h1>
-        <p class="text-muted mb-0">Gerencie seus projetos</p>
+        <p class="text-muted mb-0">Gerencie as entidades do projeto</p>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCriar">
-        <i class="bi bi-plus me-1"></i>Novo Projeto
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCriar">
+        <i class="bi bi-plus me-1"></i>Nova Entidade
     </button>
 </div>
 
-<!-- Cards de Estatísticas -->
 <div class="row g-3 my-4">
     <div class="col-xl-3 col-md-6">
-        <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total de Projetos
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total de Entidades
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_projetos }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_entidades }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="bi bi-kanban text-gray-300" style="font-size: 2rem;"></i>
+                        <i class="bi bi-diagram-3 text-gray-300" style="font-size: 2rem;"></i>
                     </div>
                 </div>
             </div>
@@ -37,26 +41,25 @@
     </div>
 </div>
 
-<!-- Filtros -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">
+        <h6 class="m-0 font-weight-bold text-success">
             <i class="bi bi-funnel me-1"></i>Filtros
         </h6>
     </div>
     <div class="card-body">
         <form method="get" class="row g-3">
             <div class="col-md-8">
-                <label for="filtroNome" class="form-label">Nome do Projeto</label>
+                <label for="filtroNome" class="form-label">Nome da Entidade</label>
                 <input type="text" class="form-control" id="filtroNome" name="nome" 
                        value="{{ filtro_nome }}" placeholder="Buscar por nome...">
             </div>
             <div class="col-md-4 d-flex align-items-end">
                 <div class="btn-group w-100">
-                    <button type="submit" class="btn btn-outline-primary">
+                    <button type="submit" class="btn btn-outline-success">
                         <i class="bi bi-search me-1"></i>Buscar
                     </button>
-                    <a href="/projetos/" class="btn btn-outline-secondary">
+                    <a href="/projetos/{{ projeto.id }}/entidades" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-clockwise me-1"></i>Limpar
                     </a>
                 </div>
@@ -65,73 +68,69 @@
     </div>
 </div>
 
-<!-- Tabela -->
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="bi bi-table me-1"></i>Lista de Projetos
+        <h6 class="m-0 font-weight-bold text-success">
+            <i class="bi bi-table me-1"></i>Lista de Entidades
         </h6>
         <small class="text-muted">
-            {% if projetos %}
-                Mostrando {{ projetos|length }} de {{ total_projetos }} projetos
+            {% if entidades %}
+                Mostrando {{ entidades|length }} de {{ total_entidades }} entidades
             {% endif %}
         </small>
     </div>
     <div class="card-body p-0">
-        {% if projetos %}
+        {% if entidades %}
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
                         <th class="border-0 px-4 py-3">
-                            <span class="text-xs font-weight-bold text-primary text-uppercase">ID</span>
+                            <span class="text-xs font-weight-bold text-success text-uppercase">ID</span>
                         </th>
                         <th class="border-0 px-4 py-3">
-                            <span class="text-xs font-weight-bold text-primary text-uppercase">Nome</span>
+                            <span class="text-xs font-weight-bold text-success text-uppercase">Nome</span>
                         </th>
                         <th class="border-0 px-4 py-3">
-                            <span class="text-xs font-weight-bold text-primary text-uppercase">Data Criação</span>
+                            <span class="text-xs font-weight-bold text-success text-uppercase">Data Criação</span>
                         </th>
                         <th class="border-0 px-4 py-3 text-center" style="width: 120px;">
-                            <span class="text-xs font-weight-bold text-primary text-uppercase">Ações</span>
+                            <span class="text-xs font-weight-bold text-success text-uppercase">Ações</span>
                         </th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for projeto in projetos %}
+                    {% for entidade in entidades %}
                     <tr>
                         <td class="px-4 py-3">
-                            <span class="badge bg-light text-dark">#{{ projeto.id }}</span>
+                            <span class="badge bg-light text-dark">#{{ entidade.id }}</span>
                         </td>
                         <td class="px-4 py-3">
                             <div class="d-flex align-items-center">
-                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
-                                    <i class="bi bi-kanban text-white"></i>
+                                <div class="bg-success rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-diagram-3 text-white"></i>
                                 </div>
-                                <strong>{{ projeto.nome }}</strong>
+                                <strong>{{ entidade.nome }}</strong>
                             </div>
                         </td>
                         <td class="px-4 py-3">
-                            <small class="text-muted">{{ projeto.data_cadastro.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <small class="text-muted">{{ entidade.data_cadastro.strftime('%d/%m/%Y %H:%M') }}</small>
                         </td>
                         <td class="px-4 py-3 text-center">
                             <div class="btn-group btn-group-sm">
-                                <a href="/projetos/{{ projeto.id }}/entidades" class="btn btn-outline-success" title="Gerenciar Entidades">
-                                    <i class="bi bi-diagram-3"></i>
-                                </a>
-                                <button class="btn btn-outline-primary btn-editar" 
+                                <button class="btn btn-outline-success btn-editar" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#modalEditar"
-                                        data-id="{{ projeto.id }}"
-                                        data-nome="{{ projeto.nome }}"
+                                        data-id="{{ entidade.id }}"
+                                        data-nome="{{ entidade.nome }}"
                                         title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button class="btn btn-outline-danger btn-excluir" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#modalExcluir"
-                                        data-id="{{ projeto.id }}"
-                                        data-nome="{{ projeto.nome }}"
+                                        data-id="{{ entidade.id }}"
+                                        data-nome="{{ entidade.nome }}"
                                         title="Excluir">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -143,7 +142,6 @@
             </table>
         </div>
         
-        <!-- Paginação -->
         {% if total_paginas > 1 %}
         <div class="card-footer bg-white border-0">
             <nav>
@@ -183,12 +181,12 @@
         {% else %}
         <div class="text-center py-5">
             <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
-            <h5 class="text-muted mt-3">Nenhum projeto encontrado</h5>
+            <h5 class="text-muted mt-3">Nenhuma entidade encontrada</h5>
             <p class="text-muted">
                 {% if filtro_nome %}
                     Tente ajustar os filtros de busca
                 {% else %}
-                    Comece criando seu primeiro projeto
+                    Comece criando sua primeira entidade
                 {% endif %}
             </p>
         </div>
@@ -196,28 +194,27 @@
     </div>
 </div>
 
-<!-- Modal Criar -->
 <div class="modal fade" id="modalCriar" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post" action="/projetos/criar">
+            <form method="post" action="/projetos/{{ projeto.id }}/entidades/criar">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-plus-circle me-2"></i>Novo Projeto
+                        <i class="bi bi-plus-circle me-2"></i>Nova Entidade
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="nome" class="form-label">Nome do Projeto *</label>
-                        <input type="text" class="form-control" name="nome" id="nome" required placeholder="Digite o nome do projeto">
-                        <div class="form-text">O nome deve ser único no sistema</div>
+                        <label for="nome" class="form-label">Nome da Entidade *</label>
+                        <input type="text" class="form-control" name="nome" id="nome" required placeholder="Digite o nome da entidade">
+                        <div class="form-text">O nome deve ser único no projeto</div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check me-1"></i>Criar Projeto
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check me-1"></i>Criar Entidade
                     </button>
                 </div>
             </form>
@@ -225,26 +222,25 @@
     </div>
 </div>
 
-<!-- Modal Editar -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post" id="formEditar">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-pencil me-2"></i>Editar Projeto
+                        <i class="bi bi-pencil me-2"></i>Editar Entidade
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="editNome" class="form-label">Nome do Projeto *</label>
+                        <label for="editNome" class="form-label">Nome da Entidade *</label>
                         <input type="text" class="form-control" name="nome" id="editNome" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-success">
                         <i class="bi bi-check me-1"></i>Salvar Alterações
                     </button>
                 </div>
@@ -253,7 +249,6 @@
     </div>
 </div>
 
-<!-- Modal Excluir -->
 <div class="modal fade" id="modalExcluir" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -269,7 +264,7 @@
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <strong>Atenção!</strong> Esta ação não pode ser desfeita.
                     </div>
-                    <p>Tem certeza que deseja excluir o projeto <strong id="nomeExcluir"></strong>?</p>
+                    <p>Tem certeza que deseja excluir a entidade <strong id="nomeExcluir"></strong>?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -286,29 +281,26 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Event listeners para botões de editar
         document.querySelectorAll('.btn-editar').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 const nome = this.getAttribute('data-nome');
                 
-                document.getElementById('formEditar').action = '/projetos/editar/' + id;
+                document.getElementById('formEditar').action = '/projetos/{{ projeto.id }}/entidades/editar/' + id;
                 document.getElementById('editNome').value = nome;
             });
         });
 
-        // Event listeners para botões de excluir
         document.querySelectorAll('.btn-excluir').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 const nome = this.getAttribute('data-nome');
                 
-                document.getElementById('formExcluir').action = '/projetos/deletar/' + id;
+                document.getElementById('formExcluir').action = '/projetos/{{ projeto.id }}/entidades/deletar/' + id;
                 document.getElementById('nomeExcluir').textContent = nome;
             });
         });
 
-        // Limpar formulários ao fechar modais
         document.querySelectorAll('.modal').forEach(function(modal) {
             modal.addEventListener('hidden.bs.modal', function() {
                 const forms = modal.querySelectorAll('form');

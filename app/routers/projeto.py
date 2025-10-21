@@ -178,3 +178,184 @@ def deletar_projeto(
             url="/projetos/?error_message=Erro ao excluir projeto", 
             status_code=303
         )
+    
+# Seção de entidades
+
+@router.get("/{projeto_id}/entidades", response_class=HTMLResponse)
+def listar_entidades(
+    projeto_id: int,
+    request: Request,
+    passo: int = 0,
+    limite: int = 10,
+    nome: Optional[str] = None,
+    success_message: Optional[str] = None,
+    error_message: Optional[str] = None,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    query_verificar_projeto = text("""
+        SELECT p.ID, p.NOME FROM PROJETO p 
+        INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+        WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+    """)
+    projeto = db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first()
+    
+    if not projeto:
+        return RedirectResponse(url="/projetos/?error_message=Projeto não encontrado", status_code=303)
+    
+    query_base = "SELECT ID, NOME, DATA_CADASTRO FROM ESTR_ENTIDADE WHERE PROJETO_ID = :projeto_id"
+    parametros = {"projeto_id": projeto_id}
+    
+    if nome:
+        query_base += " AND NOME ILIKE :nome"
+        parametros["nome"] = f"%{nome}%"
+    
+    query_base += " ORDER BY DATA_CADASTRO DESC LIMIT :limite OFFSET :passo"
+    parametros["limite"] = limite
+    parametros["passo"] = passo
+    
+    query = text(query_base)
+    result = db.execute(query, parametros)
+    entidades = result.fetchall()
+    
+    query_total = text("SELECT COUNT(*) as total FROM ESTR_ENTIDADE WHERE PROJETO_ID = :projeto_id")
+    total_entidades = db.execute(query_total, {"projeto_id": projeto_id}).scalar()
+    
+    total_paginas = (total_entidades + limite - 1) // limite if total_entidades > 0 else 1
+    pagina_atual = (passo // limite) + 1
+
+    contexto = {
+        "request": request,
+        "projeto": projeto,
+        "entidades": entidades,
+        "total_entidades": total_entidades,
+        "pagina_atual": pagina_atual,
+        "total_paginas": total_paginas,
+        "limite": limite,
+        "filtro_nome": nome or "",
+        "has_previous": passo > 0,
+        "has_next": pagina_atual < total_paginas,
+        "previous_page": max(1, pagina_atual - 1),
+        "next_page": min(total_paginas, pagina_atual + 1),
+        "success_message": success_message,
+        "error_message": error_message,
+        "usuario": current_user
+    }
+    
+    return templates.TemplateResponse("entidades.html", contexto)
+
+@router.post("/{projeto_id}/entidades/criar")
+def criar_entidade(
+    projeto_id: int,
+    nome: str = Form(...),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar_projeto = text("""
+            SELECT p.ID FROM PROJETO p 
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(url="/projetos/?error_message=Projeto não encontrado", status_code=303)
+        
+        query_checar_nome = text("SELECT ID FROM ESTR_ENTIDADE WHERE NOME = :nome AND PROJETO_ID = :projeto_id")
+        if db.execute(query_checar_nome, {"nome": nome, "projeto_id": projeto_id}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/entidades?error_message=Já existe uma entidade com este nome", 
+                status_code=303
+            )
+        
+        query_cadastro = text("INSERT INTO ESTR_ENTIDADE (PROJETO_ID, NOME) VALUES (:projeto_id, :nome)")
+        db.execute(query_cadastro, {"projeto_id": projeto_id, "nome": nome})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades?success_message=Entidade criada com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades?error_message=Erro ao criar entidade", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/entidades/editar/{entidade_id}")
+def editar_entidade(
+    projeto_id: int,
+    entidade_id: int,
+    nome: str = Form(...),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT ee.ID FROM ESTR_ENTIDADE ee
+            INNER JOIN PROJETO p ON ee.PROJETO_ID = p.ID
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE ee.ID = :entidade_id AND p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"entidade_id": entidade_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/entidades?error_message=Entidade não encontrada", 
+                status_code=303
+            )
+        
+        query_checar_nome = text("SELECT ID FROM ESTR_ENTIDADE WHERE NOME = :nome AND PROJETO_ID = :projeto_id AND ID != :entidade_id")
+        if db.execute(query_checar_nome, {"nome": nome, "projeto_id": projeto_id, "entidade_id": entidade_id}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/entidades?error_message=Já existe uma entidade com este nome", 
+                status_code=303
+            )
+        
+        query_update = text("UPDATE ESTR_ENTIDADE SET NOME = :nome WHERE ID = :entidade_id")
+        db.execute(query_update, {"nome": nome, "entidade_id": entidade_id})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades?success_message=Entidade atualizada com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades?error_message=Erro ao atualizar entidade", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/entidades/deletar/{entidade_id}")
+def deletar_entidade(
+    projeto_id: int,
+    entidade_id: int,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT ee.ID FROM ESTR_ENTIDADE ee
+            INNER JOIN PROJETO p ON ee.PROJETO_ID = p.ID
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE ee.ID = :entidade_id AND p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"entidade_id": entidade_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/entidades?error_message=Entidade não encontrada", 
+                status_code=303
+            )
+        
+        query_delete = text("DELETE FROM ESTR_ENTIDADE WHERE ID = :entidade_id")
+        db.execute(query_delete, {"entidade_id": entidade_id})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades?success_message=Entidade excluída com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades?error_message=Erro ao excluir entidade", 
+            status_code=303
+        )
