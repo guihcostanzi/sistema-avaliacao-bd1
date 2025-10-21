@@ -55,4 +55,4 @@ def logout(request: Request):
     # Limpa a sessão
     request.session.clear()
 
-    return RedirectResponse(url="/login", status_code=302)
+    return RedirectResponse(url="/auth/login", status_code=302)
