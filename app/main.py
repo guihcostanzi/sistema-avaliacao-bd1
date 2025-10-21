@@ -14,7 +14,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.session_dependencies import get_usuario_autenticado
 
 # Importação de routers (colocando 'app.' pois estão dentro da pasta app)
-from app.routers import usuario, authentication
+from app.routers import usuario, authentication, projeto
 
 # --- Configuração da Aplicação ---
 app = FastAPI(
@@ -89,6 +89,12 @@ app.include_router(
     usuario.router, 
     prefix="/usuarios",        
     tags=["Usuarios"]   
+)
+
+app.include_router(
+    projeto.router, 
+    prefix="/projetos",        
+    tags=["Projetos"]   
 )
 
 # --- Endpoints da Página Principal (Frontend) ---
