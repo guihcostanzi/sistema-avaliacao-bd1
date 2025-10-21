@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Perguntas - {{ projeto.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/projetos/">Projetos</a></li>
+                <li class="breadcrumb-item active">{{ projeto.nome }}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-question-circle me-2 text-warning"></i>Perguntas
+        </h1>
+        <p class="text-muted mb-0">Gerencie as perguntas do projeto</p>
+    </div>
+    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalCriar">
+        <i class="bi bi-plus me-1"></i>Nova Pergunta
+    </button>
+</div>
+
+<div class="row g-3 my-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Total de Perguntas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_perguntas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-question-circle text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-warning">
+            <i class="bi bi-funnel me-1"></i>Filtros
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="filtroPergunta" class="form-label">Pergunta</label>
+                <input type="text" class="form-control" id="filtroPergunta" name="pergunta" 
+                       value="{{ filtro_pergunta }}" placeholder="Buscar por pergunta...">
+            </div>
+            <div class="col-md-3">
+                <label for="filtroTipo" class="form-label">Tipo</label>
+                <select class="form-control" id="filtroTipo" name="tipo">
+                    <option value="">Todos os tipos</option>
+                    <option value="texto" {% if filtro_tipo == 'texto' %}selected{% endif %}>Texto</option>
+                    <option value="numero" {% if filtro_tipo == 'numero' %}selected{% endif %}>Número</option>
+                    <option value="data" {% if filtro_tipo == 'data' %}selected{% endif %}>Data</option>
+                    <option value="booleano" {% if filtro_tipo == 'booleano' %}selected{% endif %}>Booleano</option>
+                    <option value="entidade" {% if filtro_tipo == 'entidade' %}selected{% endif %}>Entidade</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="filtroModelo" class="form-label">Modelo</label>
+                <select class="form-control" id="filtroModelo" name="modelo">
+                    <option value="">Todos os modelos</option>
+                    <option value="livre" {% if filtro_modelo == 'livre' %}selected{% endif %}>Livre</option>
+                    <option value="pre-definido" {% if filtro_modelo == 'pre-definido' %}selected{% endif %}>Pré-definido</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="btn-group w-100">
+                    <button type="submit" class="btn btn-outline-warning">
+                        <i class="bi bi-search me-1"></i>Buscar
+                    </button>
+                    <a href="/projetos/{{ projeto.id }}/perguntas" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Limpar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-warning">
+            <i class="bi bi-table me-1"></i>Lista de Perguntas
+        </h6>
+        <small class="text-muted">
+            {% if perguntas %}
+                Mostrando {{ perguntas|length }} de {{ total_perguntas }} perguntas
+            {% endif %}
+        </small>
+    </div>
+    <div class="card-body p-0">
+        {% if perguntas %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">ID</span>
+                        </th>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">Pergunta</span>
+                        </th>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">Tipo</span>
+                        </th>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">Modelo</span>
+                        </th>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">Entidade</span>
+                        </th>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">Data Criação</span>
+                        </th>
+                        <th class="border-0 px-4 py-3 text-center" style="width: 150px;">
+                            <span class="text-xs font-weight-bold text-warning text-uppercase">Ações</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pergunta in perguntas %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <span class="badge bg-light text-dark">#{{ pergunta.id }}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-question-circle text-white"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ pergunta.pergunta[:50] }}{% if pergunta.pergunta|length > 50 %}...{% endif %}</strong>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if pergunta.tipo == 'texto' %}
+                                <span class="badge bg-primary">Texto</span>
+                            {% elif pergunta.tipo == 'numero' %}
+                                <span class="badge bg-success">Número</span>
+                            {% elif pergunta.tipo == 'data' %}
+                                <span class="badge bg-info">Data</span>
+                            {% elif pergunta.tipo == 'booleano' %}
+                                <span class="badge bg-secondary">Booleano</span>
+                            {% elif pergunta.tipo == 'entidade' %}
+                                <span class="badge bg-warning text-dark">Entidade</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">{{ pergunta.tipo }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if pergunta.modelo == 'livre' %}
+                                <span class="badge bg-success">Livre</span>
+                            {% elif pergunta.modelo == 'pre-definido' %}
+                                <span class="badge bg-info">Pré-definido</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">{{ pergunta.modelo }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if pergunta.entidade_nome %}
+                                <span class="text-success">{{ pergunta.entidade_nome }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            <small class="text-muted">{{ pergunta.data_cadastro.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <div class="btn-group btn-group-sm">
+                                {% if pergunta.modelo == 'pre-definido' %}
+                                <a href="/projetos/{{ projeto.id }}/perguntas/{{ pergunta.id }}/valores" class="btn btn-outline-info" title="Gerenciar Valores">
+                                    <i class="bi bi-list-check"></i>
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-outline-warning btn-editar" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalEditar"
+                                        data-id="{{ pergunta.id }}"
+                                        data-pergunta="{{ pergunta.pergunta }}"
+                                        data-tipo="{{ pergunta.tipo }}"
+                                        data-modelo="{{ pergunta.modelo }}"
+                                        data-entidade="{{ pergunta.estr_entidade_id or '' }}"
+                                        title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-excluir" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalExcluir"
+                                        data-id="{{ pergunta.id }}"
+                                        data-pergunta="{{ pergunta.pergunta }}"
+                                        title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if total_paginas > 1 %}
+        <div class="card-footer bg-white border-0">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?passo={{ (previous_page - 1) * limite }}&limite={{ limite }}&pergunta={{ filtro_pergunta }}&tipo={{ filtro_tipo }}&modelo={{ filtro_modelo }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ pagina_atual }} de {{ total_paginas }}</span>
+                    </li>
+                    
+                    {% if has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?passo={{ (next_page - 1) * limite }}&limite={{ limite }}&pergunta={{ filtro_pergunta }}&tipo={{ filtro_tipo }}&modelo={{ filtro_modelo }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Nenhuma pergunta encontrada</h5>
+            <p class="text-muted">
+                {% if filtro_pergunta or filtro_tipo or filtro_modelo %}
+                    Tente ajustar os filtros de busca
+                {% else %}
+                    Comece criando sua primeira pergunta
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="modalCriar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="/projetos/{{ projeto.id }}/perguntas/criar">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Nova Pergunta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="pergunta" class="form-label">Pergunta *</label>
+                        <textarea class="form-control" name="pergunta" id="pergunta" rows="3" required placeholder="Digite a pergunta"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipo" class="form-label">Tipo *</label>
+                                <select class="form-control" name="tipo" id="tipo" required onchange="toggleEntidadeSelect()">
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="texto">Texto</option>
+                                    <option value="numero">Número</option>
+                                    <option value="data">Data</option>
+                                    <option value="booleano">Booleano</option>
+                                    <option value="entidade">Entidade</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modelo" class="form-label">Modelo *</label>
+                                <select class="form-control" name="modelo" id="modelo" required>
+                                    <option value="">Selecione o modelo</option>
+                                    <option value="livre">Livre</option>
+                                    <option value="pre-definido">Pré-definido</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="entidadeSelect" style="display: none;">
+                        <label for="entidade" class="form-label">Entidade Esperada</label>
+                        <select class="form-control" name="estr_entidade_id" id="entidade">
+                            <option value="">Selecione a entidade</option>
+                            {% for entidade in entidades %}
+                            <option value="{{ entidade.id }}">{{ entidade.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check me-1"></i>Criar Pergunta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" id="formEditar">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil me-2"></i>Editar Pergunta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editPergunta" class="form-label">Pergunta *</label>
+                        <textarea class="form-control" name="pergunta" id="editPergunta" rows="3" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editTipo" class="form-label">Tipo *</label>
+                                <select class="form-control" name="tipo" id="editTipo" required onchange="toggleEditEntidadeSelect()">
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="texto">Texto</option>
+                                    <option value="numero">Número</option>
+                                    <option value="data">Data</option>
+                                    <option value="booleano">Booleano</option>
+                                    <option value="entidade">Entidade</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editModelo" class="form-label">Modelo *</label>
+                                <select class="form-control" name="modelo" id="editModelo" required>
+                                    <option value="">Selecione o modelo</option>
+                                    <option value="livre">Livre</option>
+                                    <option value="pre-definido">Pré-definido</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="editEntidadeSelect" style="display: none;">
+                        <label for="editEntidade" class="form-label">Entidade Esperada</label>
+                        <select class="form-control" name="estr_entidade_id" id="editEntidade">
+                            <option value="">Selecione a entidade</option>
+                            {% for entidade in entidades %}
+                            <option value="{{ entidade.id }}">{{ entidade.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check me-1"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="formExcluir">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                    </div>
+                    <p>Tem certeza que deseja excluir a pergunta <strong id="perguntaExcluir"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Sim, Excluir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleEntidadeSelect() {
+        const tipo = document.getElementById('tipo').value;
+        const entidadeSelect = document.getElementById('entidadeSelect');
+        if (tipo === 'entidade') {
+            entidadeSelect.style.display = 'block';
+        } else {
+            entidadeSelect.style.display = 'none';
+        }
+    }
+
+    function toggleEditEntidadeSelect() {
+        const tipo = document.getElementById('editTipo').value;
+        const entidadeSelect = document.getElementById('editEntidadeSelect');
+        if (tipo === 'entidade') {
+            entidadeSelect.style.display = 'block';
+        } else {
+            entidadeSelect.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-editar').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const pergunta = this.getAttribute('data-pergunta');
+                const tipo = this.getAttribute('data-tipo');
+                const modelo = this.getAttribute('data-modelo');
+                const entidade = this.getAttribute('data-entidade');
+                
+                document.getElementById('formEditar').action = '/projetos/{{ projeto.id }}/perguntas/editar/' + id;
+                document.getElementById('editPergunta').value = pergunta;
+                document.getElementById('editTipo').value = tipo;
+                document.getElementById('editModelo').value = modelo;
+                document.getElementById('editEntidade').value = entidade;
+                
+                toggleEditEntidadeSelect();
+            });
+        });
+
+        document.querySelectorAll('.btn-excluir').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const pergunta = this.getAttribute('data-pergunta');
+                
+                document.getElementById('formExcluir').action = '/projetos/{{ projeto.id }}/perguntas/deletar/' + id;
+                document.getElementById('perguntaExcluir').textContent = pergunta.substring(0, 50) + (pergunta.length > 50 ? '...' : '');
+            });
+        });
+
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const forms = modal.querySelectorAll('form');
+                forms.forEach(function(form) {
+                    form.reset();
+                });
+                document.getElementById('entidadeSelect').style.display = 'none';
+                document.getElementById('editEntidadeSelect').style.display = 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

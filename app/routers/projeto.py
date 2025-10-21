@@ -628,3 +628,235 @@ def deletar_atributo(
             url=f"/projetos/{projeto_id}/entidades/{entidade_id}/atributos?error_message=Erro ao excluir atributo", 
             status_code=303
         )
+    
+# Endpoints de perguntas
+
+@router.get("/{projeto_id}/perguntas", response_class=HTMLResponse)
+def listar_perguntas(
+    projeto_id: int,
+    request: Request,
+    passo: int = 0,
+    limite: int = 10,
+    pergunta: Optional[str] = None,
+    tipo: Optional[str] = None,
+    modelo: Optional[str] = None,
+    success_message: Optional[str] = None,
+    error_message: Optional[str] = None,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    query_verificar_projeto = text("""
+        SELECT p.ID, p.NOME FROM PROJETO p 
+        INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+        WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+    """)
+    projeto = db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first()
+    
+    if not projeto:
+        return RedirectResponse(url="/projetos/?error_message=Projeto não encontrado", status_code=303)
+    
+    query_base = """
+        SELECT p.ID, p.PERGUNTA, p.TIPO, p.MODELO, p.DATA_CADASTRO, p.ESTR_ENTIDADE_ID,
+               ee.NOME as entidade_nome
+        FROM PERGUNTA p 
+        LEFT JOIN ESTR_ENTIDADE ee ON p.ESTR_ENTIDADE_ID = ee.ID
+        WHERE p.PROJETO_ID = :projeto_id
+    """
+    parametros = {"projeto_id": projeto_id}
+    
+    if pergunta:
+        query_base += " AND p.PERGUNTA ILIKE :pergunta"
+        parametros["pergunta"] = f"%{pergunta}%"
+    
+    if tipo:
+        query_base += " AND p.TIPO = :tipo"
+        parametros["tipo"] = tipo
+    
+    if modelo:
+        query_base += " AND p.MODELO = :modelo"
+        parametros["modelo"] = modelo
+    
+    query_base += " ORDER BY p.DATA_CADASTRO DESC LIMIT :limite OFFSET :passo"
+    parametros["limite"] = limite
+    parametros["passo"] = passo
+    
+    query = text(query_base)
+    result = db.execute(query, parametros)
+    perguntas = result.fetchall()
+    
+    query_total = text("SELECT COUNT(*) as total FROM PERGUNTA WHERE PROJETO_ID = :projeto_id")
+    total_perguntas = db.execute(query_total, {"projeto_id": projeto_id}).scalar()
+    
+    query_entidades = text("SELECT ID, NOME FROM ESTR_ENTIDADE WHERE PROJETO_ID = :projeto_id ORDER BY NOME")
+    entidades = db.execute(query_entidades, {"projeto_id": projeto_id}).fetchall()
+    
+    total_paginas = (total_perguntas + limite - 1) // limite if total_perguntas > 0 else 1
+    pagina_atual = (passo // limite) + 1
+
+    contexto = {
+        "request": request,
+        "projeto": projeto,
+        "perguntas": perguntas,
+        "entidades": entidades,
+        "total_perguntas": total_perguntas,
+        "pagina_atual": pagina_atual,
+        "total_paginas": total_paginas,
+        "limite": limite,
+        "filtro_pergunta": pergunta or "",
+        "filtro_tipo": tipo or "",
+        "filtro_modelo": modelo or "",
+        "has_previous": passo > 0,
+        "has_next": pagina_atual < total_paginas,
+        "previous_page": max(1, pagina_atual - 1),
+        "next_page": min(total_paginas, pagina_atual + 1),
+        "success_message": success_message,
+        "error_message": error_message,
+        "usuario": current_user
+    }
+    
+    return templates.TemplateResponse("perguntas.html", contexto)
+
+@router.post("/{projeto_id}/perguntas/criar")
+def criar_pergunta(
+    projeto_id: int,
+    pergunta: str = Form(...),
+    tipo: str = Form(...),
+    modelo: str = Form(...),
+    estr_entidade_id: Optional[int] = Form(None),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar_projeto = text("""
+            SELECT p.ID FROM PROJETO p 
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(url="/projetos/?error_message=Projeto não encontrado", status_code=303)
+        
+        if tipo == "entidade" and not estr_entidade_id:
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas?error_message=Entidade é obrigatória para perguntas do tipo Entidade", 
+                status_code=303
+            )
+        
+        if tipo != "entidade":
+            estr_entidade_id = None
+        
+        query_cadastro = text("""
+            INSERT INTO PERGUNTA (PROJETO_ID, ESTR_ENTIDADE_ID, PERGUNTA, TIPO, MODELO)
+            VALUES (:projeto_id, :estr_entidade_id, :pergunta, :tipo, :modelo)
+        """)
+        db.execute(query_cadastro, {
+            "projeto_id": projeto_id,
+            "estr_entidade_id": estr_entidade_id,
+            "pergunta": pergunta,
+            "tipo": tipo,
+            "modelo": modelo
+        })
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas?success_message=Pergunta criada com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas?error_message=Erro ao criar pergunta", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/perguntas/editar/{pergunta_id}")
+def editar_pergunta(
+    projeto_id: int,
+    pergunta_id: int,
+    pergunta: str = Form(...),
+    tipo: str = Form(...),
+    modelo: str = Form(...),
+    estr_entidade_id: Optional[int] = Form(None),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT p.ID FROM PERGUNTA p
+            INNER JOIN PROJETO pr ON p.PROJETO_ID = pr.ID
+            INNER JOIN USUARIO_PROJETO up ON pr.ID = up.PROJETO_ID 
+            WHERE p.ID = :pergunta_id AND pr.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"pergunta_id": pergunta_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas?error_message=Pergunta não encontrada", 
+                status_code=303
+            )
+        
+        if tipo == "entidade" and not estr_entidade_id:
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas?error_message=Entidade é obrigatória para perguntas do tipo Entidade", 
+                status_code=303
+            )
+        
+        if tipo != "entidade":
+            estr_entidade_id = None
+        
+        query_update = text("""
+            UPDATE PERGUNTA 
+            SET PERGUNTA = :pergunta, TIPO = :tipo, MODELO = :modelo, ESTR_ENTIDADE_ID = :estr_entidade_id
+            WHERE ID = :pergunta_id
+        """)
+        db.execute(query_update, {
+            "pergunta": pergunta,
+            "tipo": tipo,
+            "modelo": modelo,
+            "estr_entidade_id": estr_entidade_id,
+            "pergunta_id": pergunta_id
+        })
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas?success_message=Pergunta atualizada com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas?error_message=Erro ao atualizar pergunta", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/perguntas/deletar/{pergunta_id}")
+def deletar_pergunta(
+    projeto_id: int,
+    pergunta_id: int,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT p.ID FROM PERGUNTA p
+            INNER JOIN PROJETO pr ON p.PROJETO_ID = pr.ID
+            INNER JOIN USUARIO_PROJETO up ON pr.ID = up.PROJETO_ID 
+            WHERE p.ID = :pergunta_id AND pr.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"pergunta_id": pergunta_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas?error_message=Pergunta não encontrada", 
+                status_code=303
+            )
+        
+        query_delete = text("DELETE FROM PERGUNTA WHERE ID = :pergunta_id")
+        db.execute(query_delete, {"pergunta_id": pergunta_id})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas?success_message=Pergunta excluída com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas?error_message=Erro ao excluir pergunta", 
+            status_code=303
+        )
