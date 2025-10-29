@@ -1157,3 +1157,173 @@ def deletar_instancia(
             url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Erro ao excluir instância", 
             status_code=303
         )
+    
+# Endpoints de valores padrão das perguntas
+
+@router.get("/{projeto_id}/perguntas/{pergunta_id}/valores-padrao", response_class=HTMLResponse)
+def listar_valores_padrao_pergunta(
+    projeto_id: int,
+    pergunta_id: int,
+    request: Request,
+    success_message: Optional[str] = None,
+    error_message: Optional[str] = None,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    query_verificar = text("""
+        SELECT p.ID, p.PERGUNTA, p.TIPO, p.MODELO, pr.NOME as projeto_nome
+        FROM PERGUNTA p
+        INNER JOIN PROJETO pr ON p.PROJETO_ID = pr.ID
+        INNER JOIN USUARIO_PROJETO up ON pr.ID = up.PROJETO_ID 
+        WHERE p.ID = :pergunta_id AND pr.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+    """)
+    resultado = db.execute(query_verificar, {"pergunta_id": pergunta_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first()
+    
+    if not resultado:
+        return RedirectResponse(url="/projetos/?error_message=Pergunta não encontrada", status_code=303)
+    
+    pergunta = {
+        "id": resultado.id,
+        "pergunta": resultado.pergunta,
+        "tipo": resultado.tipo,
+        "modelo": resultado.modelo
+    }
+    projeto = {"id": projeto_id, "nome": resultado.projeto_nome}
+    
+    query_valores = text("""
+        SELECT PERGUNTA_ID, VALOR
+        FROM VALORES_PADRAO 
+        WHERE PERGUNTA_ID = :pergunta_id
+        ORDER BY VALOR
+    """)
+    valores_padrao = db.execute(query_valores, {"pergunta_id": pergunta_id}).fetchall()
+
+    contexto = {
+        "request": request,
+        "projeto": projeto,
+        "pergunta": pergunta,
+        "valores_padrao": valores_padrao,
+        "success_message": success_message,
+        "error_message": error_message,
+        "usuario": current_user
+    }
+    
+    return templates.TemplateResponse("valores_padrao_pergunta.html", contexto)
+
+@router.post("/{projeto_id}/perguntas/{pergunta_id}/valores-padrao/criar")
+def criar_valor_padrao_pergunta(
+    projeto_id: int,
+    pergunta_id: int,
+    valor: str = Form(...),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT p.ID, p.TIPO FROM PERGUNTA p
+            INNER JOIN PROJETO pr ON p.PROJETO_ID = pr.ID
+            INNER JOIN USUARIO_PROJETO up ON pr.ID = up.PROJETO_ID 
+            WHERE p.ID = :pergunta_id AND pr.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        pergunta_result = db.execute(query_verificar, {"pergunta_id": pergunta_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first()
+        
+        if not pergunta_result:
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas?error_message=Pergunta não encontrada", 
+                status_code=303
+            )
+        
+        # Validação por tipo
+        valor_limpo = valor.strip()
+        tipo_pergunta = pergunta_result.tipo
+        
+        if tipo_pergunta == 'numero':
+            try:
+                float(valor_limpo)
+            except ValueError:
+                return RedirectResponse(
+                    url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Para perguntas do tipo número, digite apenas valores numéricos", 
+                    status_code=303
+                )
+        elif tipo_pergunta == 'email':
+            import re
+            email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+            if not re.match(email_regex, valor_limpo):
+                return RedirectResponse(
+                    url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Para perguntas do tipo email, digite um email válido", 
+                    status_code=303
+                )
+        elif tipo_pergunta == 'data':
+            from datetime import datetime
+            try:
+                datetime.strptime(valor_limpo, '%Y-%m-%d')
+            except ValueError:
+                return RedirectResponse(
+                    url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Para perguntas do tipo data, use o formato YYYY-MM-DD", 
+                    status_code=303
+                )
+        elif tipo_pergunta == 'booleano':
+            if valor_limpo not in ['true', 'false']:
+                return RedirectResponse(
+                    url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Para perguntas do tipo booleano, selecione apenas Sim ou Não", 
+                    status_code=303
+                )
+        
+        # Verificar se já existe este valor
+        query_existe = text("SELECT PERGUNTA_ID FROM VALORES_PADRAO WHERE PERGUNTA_ID = :pergunta_id AND VALOR = :valor")
+        if db.execute(query_existe, {"pergunta_id": pergunta_id, "valor": valor_limpo}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Este valor já existe", 
+                status_code=303
+            )
+        
+        query_insert = text("INSERT INTO VALORES_PADRAO (PERGUNTA_ID, VALOR) VALUES (:pergunta_id, :valor)")
+        db.execute(query_insert, {"pergunta_id": pergunta_id, "valor": valor_limpo})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?success_message=Valor padrão criado com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Erro ao criar valor padrão", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/perguntas/{pergunta_id}/valores-padrao/deletar")
+def deletar_valor_padrao_pergunta(
+    projeto_id: int,
+    pergunta_id: int,
+    valor: str = Form(...),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT p.ID FROM PERGUNTA p
+            INNER JOIN PROJETO pr ON p.PROJETO_ID = pr.ID
+            INNER JOIN USUARIO_PROJETO up ON pr.ID = up.PROJETO_ID 
+            WHERE p.ID = :pergunta_id AND pr.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"pergunta_id": pergunta_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/perguntas?error_message=Pergunta não encontrada", 
+                status_code=303
+            )
+        
+        query_delete = text("DELETE FROM VALORES_PADRAO WHERE PERGUNTA_ID = :pergunta_id AND VALOR = :valor")
+        db.execute(query_delete, {"pergunta_id": pergunta_id, "valor": valor})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?success_message=Valor padrão removido com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Erro ao remover valor padrão", 
+            status_code=303
+        )

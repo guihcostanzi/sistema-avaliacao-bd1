@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Valores Padrão - {{ pergunta.pergunta }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/projetos/">Projetos</a></li>
+                <li class="breadcrumb-item"><a href="/projetos/{{ projeto.id }}/perguntas">{{ projeto.nome }}</a></li>
+                <li class="breadcrumb-item active">Valores Padrão</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-gear me-2 text-purple"></i>Valores Padrão
+        </h1>
+        <p class="text-muted mb-0">{{ pergunta.pergunta }}</p>
+    </div>
+    <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalCriar">
+        <i class="bi bi-plus me-1"></i>Novo Valor Padrão
+    </button>
+</div>
+
+<div class="row g-3 my-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-purple shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">
+                            Total de Valores
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ valores_padrao|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-list-ul text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Tipo da Pergunta
+                        </div>
+                        <div class="h6 mb-0 font-weight-bold text-gray-800">{{ pergunta.tipo|title }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-tag text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-purple">
+            <i class="bi bi-list-ul me-1"></i>Lista de Valores Padrão
+        </h6>
+        <small class="text-muted">
+            {% if valores_padrao %}
+                {{ valores_padrao|length }} valor(es) configurado(s)
+            {% endif %}
+        </small>
+    </div>
+    <div class="card-body p-0">
+        {% if valores_padrao %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Valor</span>
+                        </th>
+                        <th class="border-0 px-4 py-3 text-center" style="width: 120px;">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Ações</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for valor in valores_padrao %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-purple rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-check-circle text-white"></i>
+                                </div>
+                                <strong>{{ valor.valor }}</strong>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button class="btn btn-outline-danger btn-sm btn-excluir" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalExcluir"
+                                    data-valor="{{ valor.valor }}"
+                                    title="Excluir">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-list-ul text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Nenhum valor padrão configurado</h5>
+            <p class="text-muted">Comece criando valores que poderão ser selecionados automaticamente</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Criar -->
+<div class="modal fade" id="modalCriar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/projetos/{{ projeto.id }}/perguntas/{{ pergunta.id }}/valores-padrao/criar" id="formCriar">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Novo Valor Padrão
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Pergunta:</strong></label>
+                        <p class="text-muted">{{ pergunta.pergunta }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="valor" class="form-label">Valor Padrão <span class="text-danger">*</span></label>
+                        
+                        {% if pergunta.tipo == 'numero' %}
+                            <input type="number" class="form-control" name="valor" id="valor" 
+                                   placeholder="Digite um número" required step="any">
+                            <div class="form-text">Digite apenas números (ex: 123, 45.67)</div>
+                        {% elif pergunta.tipo == 'data' %}
+                            <input type="date" class="form-control" name="valor" id="valor" required>
+                            <div class="form-text">Selecione uma data</div>
+                        {% elif pergunta.tipo == 'email' %}
+                            <input type="email" class="form-control" name="valor" id="valor" 
+                                   placeholder="exemplo@email.com" required>
+                            <div class="form-text">Digite um email válido</div>
+                        {% elif pergunta.tipo == 'booleano' %}
+                            <select class="form-control" name="valor" id="valor" required>
+                                <option value="">Selecione</option>
+                                <option value="true">Sim</option>
+                                <option value="false">Não</option>
+                            </select>
+                            <div class="form-text">Selecione Sim ou Não</div>
+                        {% else %}
+                            <textarea class="form-control" name="valor" id="valor" rows="3" 
+                                      placeholder="Digite o texto" required></textarea>
+                            <div class="form-text">Digite o texto que poderá ser selecionado</div>
+                        {% endif %}
+                        
+                        <div class="form-text mt-2">Este valor aparecerá como opção em selects de perguntas pré-definidas</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-dark">
+                        <i class="bi bi-check me-1"></i>Criar Valor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="formExcluir">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                    </div>
+                    <p>Tem certeza que deseja excluir o valor padrão <strong id="valorExcluir"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Sim, Excluir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/template" id="config-data">
+{
+    "projetoId": {{ projeto.id }},
+    "perguntaId": {{ pergunta.id }},
+    "tipoPergunta": "{{ pergunta.tipo }}"
+}
+</script>
+
+<script>
+    var configData = JSON.parse(document.getElementById('config-data').textContent);
+    var projetoId = configData.projetoId;
+    var perguntaId = configData.perguntaId;
+    var tipoPergunta = configData.tipoPergunta;
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Validação do formulário de criação
+        document.getElementById('formCriar').addEventListener('submit', function(e) {
+            const valor = document.getElementById('valor').value.trim();
+            
+            if (!valor) {
+                e.preventDefault();
+                alert('Por favor, preencha o valor padrão.');
+                return false;
+            }
+            
+            // Validações específicas por tipo
+            if (tipoPergunta === 'numero') {
+                if (isNaN(parseFloat(valor))) {
+                    e.preventDefault();
+                    alert('Para perguntas do tipo "número", digite apenas valores numéricos.');
+                    return false;
+                }
+            } else if (tipoPergunta === 'email') {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(valor)) {
+                    e.preventDefault();
+                    alert('Para perguntas do tipo "email", digite um email válido.');
+                    return false;
+                }
+            } else if (tipoPergunta === 'data') {
+                const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (!dataRegex.test(valor)) {
+                    e.preventDefault();
+                    alert('Para perguntas do tipo "data", selecione uma data válida.');
+                    return false;
+                }
+            } else if (tipoPergunta === 'booleano') {
+                if (valor !== 'true' && valor !== 'false') {
+                    e.preventDefault();
+                    alert('Para perguntas do tipo "booleano", selecione Sim ou Não.');
+                    return false;
+                }
+            }
+        });
+        
+        document.querySelectorAll('.btn-excluir').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const valor = this.getAttribute('data-valor');
+                
+                document.getElementById('formExcluir').action = '/projetos/' + projetoId + '/perguntas/' + perguntaId + '/valores-padrao/deletar';
+                document.getElementById('valorExcluir').textContent = valor;
+                
+                // Criar input hidden para enviar o valor
+                const inputValor = document.createElement('input');
+                inputValor.type = 'hidden';
+                inputValor.name = 'valor';
+                inputValor.value = valor;
+                
+                const form = document.getElementById('formExcluir');
+                // Remover input anterior se existir
+                const inputAnterior = form.querySelector('input[name="valor"]');
+                if (inputAnterior) {
+                    inputAnterior.remove();
+                }
+                form.appendChild(inputValor);
+            });
+        });
+
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const forms = modal.querySelectorAll('form');
+                forms.forEach(function(form) {
+                    form.reset();
+                    // Remover inputs hidden criados dinamicamente
+                    const inputsHidden = form.querySelectorAll('input[type="hidden"]');
+                    inputsHidden.forEach(function(input) {
+                        if (input.name === 'valor') {
+                            input.remove();
+                        }
+                    });
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
