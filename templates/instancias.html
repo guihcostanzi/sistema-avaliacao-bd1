@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Instâncias - {{ entidade.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/projetos/">Projetos</a></li>
+                <li class="breadcrumb-item"><a href="/projetos/{{ projeto.id }}/entidades">{{ projeto.nome }}</a></li>
+                <li class="breadcrumb-item active">{{ entidade.nome }}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-collection me-2 text-purple"></i>Instâncias
+        </h1>
+        <p class="text-muted mb-0">Gerencie as instâncias da entidade</p>
+    </div>
+    <button class="btn btn-outline-purple" data-bs-toggle="modal" data-bs-target="#modalCriar">
+        <i class="bi bi-plus me-1"></i>Nova Instância
+    </button>
+</div>
+
+<div class="row g-3 my-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-purple shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">
+                            Total de Instâncias
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_instancias }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-collection text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-purple">
+            <i class="bi bi-table me-1"></i>Lista de Instâncias
+        </h6>
+        <small class="text-muted">
+            {% if instancias %}
+                Mostrando {{ instancias|length }} de {{ total_instancias }} instâncias
+            {% endif %}
+        </small>
+    </div>
+    <div class="card-body p-0">
+        {% if instancias %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">ID</span>
+                        </th>
+                        {% if atributo_exibicao %}
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">{{ atributo_exibicao.label or atributo_exibicao.nome_atributo }}</span>
+                        </th>
+                        {% endif %}
+                        {% for atributo in outros_atributos %}
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">{{ atributo.label or atributo.nome_atributo }}</span>
+                        </th>
+                        {% endfor %}
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Data Criação</span>
+                        </th>
+                        <th class="border-0 px-4 py-3 text-center" style="width: 120px;">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Ações</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for instancia in instancias %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <span class="badge bg-light text-dark">#{{ instancia.id_seq }}</span>
+                        </td>
+                        {% if atributo_exibicao %}
+                        <td class="px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-purple rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-collection text-white"></i>
+                                </div>
+                                <strong>{{ instancia.get('valor_' + atributo_exibicao.nome_atributo, '-') }}</strong>
+                            </div>
+                        </td>
+                        {% endif %}
+                        {% for atributo in outros_atributos %}
+                        <td class="px-4 py-3">
+                            {% set valor = instancia.get('valor_' + atributo.nome_atributo) %}
+                            {% if atributo.tipo == 'booleano' %}
+                                {% if valor == 'true' %}
+                                    <span class="badge bg-success">Sim</span>
+                                {% elif valor == 'false' %}
+                                    <span class="badge bg-danger">Não</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{{ valor or '-' }}</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="px-4 py-3">
+                            <small class="text-muted">{{ instancia.data_cadastro.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-dark btn-editar" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalEditar"
+                                        data-id="{{ instancia.id_seq }}"
+                                        {% for atributo in todos_atributos %}
+                                        data-{{ atributo.nome_atributo }}="{{ instancia.get('valor_' + atributo.nome_atributo, '') }}"
+                                        {% endfor %}
+                                        title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-excluir" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalExcluir"
+                                        data-id="{{ instancia.id_seq }}"
+                                        data-nome="{% if atributo_exibicao %}{{ instancia.get('valor_' + atributo_exibicao.nome_atributo, 'Instância #' + instancia.id_seq|string) }}{% else %}Instância #{{ instancia.id_seq }}{% endif %}"
+                                        title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if total_paginas > 1 %}
+        <div class="card-footer bg-white border-0">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?passo={{ (previous_page - 1) * limite }}&limite={{ limite }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ pagina_atual }} de {{ total_paginas }}</span>
+                    </li>
+                    
+                    {% if has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?passo={{ (next_page - 1) * limite }}&limite={{ limite }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Nenhuma instância encontrada</h5>
+            <p class="text-muted">Comece criando sua primeira instância</p>
+            {% if not todos_atributos %}
+            <div class="alert alert-warning mt-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Esta entidade não possui atributos. <a href="/projetos/{{ projeto.id }}/entidades/{{ entidade.id }}/atributos">Adicione atributos</a> antes de criar instâncias.
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if todos_atributos %}
+<div class="modal fade" id="modalCriar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="/projetos/{{ projeto.id }}/entidades/{{ entidade.id }}/instancias/criar">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Nova Instância
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        {% for atributo in todos_atributos %}
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ atributo.nome_atributo }}" class="form-label">
+                                {{ atributo.label or atributo.nome_atributo }}
+                                {% if atributo.obrigatorio %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            
+                            {% if atributo.tipo == 'texto' or atributo.tipo == 'email' %}
+                                <input type="{% if atributo.tipo == 'email' %}email{% else %}text{% endif %}" 
+                                       class="form-control" 
+                                       name="{{ atributo.nome_atributo }}" 
+                                       id="{{ atributo.nome_atributo }}"
+                                       {% if atributo.obrigatorio %}required{% endif %}
+                                       {% if not atributo.editavel %}readonly{% endif %}>
+                            {% elif atributo.tipo == 'numero' %}
+                                <input type="number" 
+                                       class="form-control" 
+                                       name="{{ atributo.nome_atributo }}" 
+                                       id="{{ atributo.nome_atributo }}"
+                                       {% if atributo.obrigatorio %}required{% endif %}
+                                       {% if not atributo.editavel %}readonly{% endif %}>
+                            {% elif atributo.tipo == 'data' %}
+                                <input type="date" 
+                                       class="form-control" 
+                                       name="{{ atributo.nome_atributo }}" 
+                                       id="{{ atributo.nome_atributo }}"
+                                       {% if atributo.obrigatorio %}required{% endif %}
+                                       {% if not atributo.editavel %}readonly{% endif %}>
+                            {% elif atributo.tipo == 'booleano' %}
+                                <select class="form-control" 
+                                        name="{{ atributo.nome_atributo }}" 
+                                        id="{{ atributo.nome_atributo }}"
+                                        {% if atributo.obrigatorio %}required{% endif %}
+                                        {% if not atributo.editavel %}disabled{% endif %}>
+                                    <option value="">Selecione</option>
+                                    <option value="true">Sim</option>
+                                    <option value="false">Não</option>
+                                </select>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-purple">
+                        <i class="bi bi-check me-1"></i>Criar Instância
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" id="formEditar">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil me-2"></i>Editar Instância
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        {% for atributo in todos_atributos %}
+                        <div class="col-md-6 mb-3">
+                            <label for="edit{{ atributo.nome_atributo }}" class="form-label">
+                                {{ atributo.label or atributo.nome_atributo }}
+                                {% if atributo.obrigatorio %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            
+                            {% if atributo.tipo == 'texto' or atributo.tipo == 'email' %}
+                                <input type="{% if atributo.tipo == 'email' %}email{% else %}text{% endif %}" 
+                                       class="form-control" 
+                                       name="{{ atributo.nome_atributo }}" 
+                                       id="edit{{ atributo.nome_atributo }}"
+                                       {% if atributo.obrigatorio %}required{% endif %}
+                                       {% if not atributo.editavel %}readonly{% endif %}>
+                            {% elif atributo.tipo == 'numero' %}
+                                <input type="number" 
+                                       class="form-control" 
+                                       name="{{ atributo.nome_atributo }}" 
+                                       id="edit{{ atributo.nome_atributo }}"
+                                       {% if atributo.obrigatorio %}required{% endif %}
+                                       {% if not atributo.editavel %}readonly{% endif %}>
+                            {% elif atributo.tipo == 'data' %}
+                                <input type="date" 
+                                       class="form-control" 
+                                       name="{{ atributo.nome_atributo }}" 
+                                       id="edit{{ atributo.nome_atributo }}"
+                                       {% if atributo.obrigatorio %}required{% endif %}
+                                       {% if not atributo.editavel %}readonly{% endif %}>
+                            {% elif atributo.tipo == 'booleano' %}
+                                <select class="form-control" 
+                                        name="{{ atributo.nome_atributo }}" 
+                                        id="edit{{ atributo.nome_atributo }}"
+                                        {% if atributo.obrigatorio %}required{% endif %}
+                                        {% if not atributo.editavel %}disabled{% endif %}>
+                                    <option value="">Selecione</option>
+                                    <option value="true">Sim</option>
+                                    <option value="false">Não</option>
+                                </select>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-purple">
+                        <i class="bi bi-check me-1"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="formExcluir">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                    </div>
+                    <p>Tem certeza que deseja excluir a instância <strong id="nomeExcluir"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Sim, Excluir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/template" id="config-data">
+{
+    "projetoId": {{ projeto.id }},
+    "entidadeId": {{ entidade.id }},
+    "atributos": [
+        {% for atributo in todos_atributos %}
+        "{{ atributo.nome_atributo }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+}
+</script>
+
+<script>
+    var configData = JSON.parse(document.getElementById('config-data').textContent);
+    var projetoId = configData.projetoId;
+    var entidadeId = configData.entidadeId;
+    var atributos = configData.atributos;
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-editar').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                
+                document.getElementById('formEditar').action = '/projetos/' + projetoId + '/entidades/' + entidadeId + '/instancias/editar/' + id;
+                
+                atributos.forEach(function(nomeAtributo) {
+                    const valor = btn.getAttribute('data-' + nomeAtributo);
+                    const campo = document.getElementById('edit' + nomeAtributo);
+                    if (campo) {
+                        campo.value = valor || '';
+                    }
+                });
+            });
+        });
+
+        document.querySelectorAll('.btn-excluir').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const nome = this.getAttribute('data-nome');
+                
+                document.getElementById('formExcluir').action = '/projetos/' + projetoId + '/entidades/' + entidadeId + '/instancias/deletar/' + id;
+                document.getElementById('nomeExcluir').textContent = nome;
+            });
+        });
+
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const forms = modal.querySelectorAll('form');
+                forms.forEach(function(form) {
+                    form.reset();
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

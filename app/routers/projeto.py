@@ -860,3 +860,300 @@ def deletar_pergunta(
             url=f"/projetos/{projeto_id}/perguntas?error_message=Erro ao excluir pergunta", 
             status_code=303
         )
+    
+# Endpoints de instâncias
+
+@router.get("/{projeto_id}/entidades/{entidade_id}/instancias", response_class=HTMLResponse)
+def listar_instancias(
+    projeto_id: int,
+    entidade_id: int,
+    request: Request,
+    passo: int = 0,
+    limite: int = 10,
+    success_message: Optional[str] = None,
+    error_message: Optional[str] = None,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    query_verificar = text("""
+        SELECT p.ID, p.NOME as projeto_nome, ee.ID as entidade_id, ee.NOME as entidade_nome
+        FROM PROJETO p 
+        INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+        INNER JOIN ESTR_ENTIDADE ee ON p.ID = ee.PROJETO_ID
+        WHERE p.ID = :projeto_id AND ee.ID = :entidade_id AND up.USUARIO_ID = :usuario_id
+    """)
+    resultado = db.execute(query_verificar, {"projeto_id": projeto_id, "entidade_id": entidade_id, "usuario_id": current_user['id']}).first()
+    
+    if not resultado:
+        return RedirectResponse(url="/projetos/?error_message=Projeto ou entidade não encontrada", status_code=303)
+    
+    projeto = {"id": resultado.id, "nome": resultado.projeto_nome}
+    entidade = {"id": resultado.entidade_id, "nome": resultado.entidade_nome}
+    
+    query_atributos = text("""
+        SELECT ID_SEQ, NOME_ATRIBUTO, TIPO, LABEL, EXIBICAO, EDITAVEL, OBRIGATORIO
+        FROM ESTR_ATRIBUTOS 
+        WHERE ESTR_ENTIDADE_ID = :entidade_id
+        ORDER BY ID_SEQ
+    """)
+    todos_atributos = db.execute(query_atributos, {"entidade_id": entidade_id}).fetchall()
+    
+    atributo_exibicao = None
+    outros_atributos = []
+    
+    for atributo in todos_atributos:
+        if atributo.exibicao:
+            atributo_exibicao = atributo
+        else:
+            outros_atributos.append(atributo)
+    
+    query_base = """
+        SELECT e.ID_SEQ, e.DATA_CADASTRO
+        FROM ENTIDADE e
+        WHERE e.ESTR_ENTIDADE_ID = :entidade_id
+        ORDER BY e.DATA_CADASTRO DESC 
+        LIMIT :limite OFFSET :passo
+    """
+    
+    result = db.execute(text(query_base), {"entidade_id": entidade_id, "limite": limite, "passo": passo})
+    entidades_base = result.fetchall()
+    
+    instancias = []
+    for entidade_row in entidades_base:
+        instancia = {
+            "id_seq": entidade_row.id_seq,
+            "data_cadastro": entidade_row.data_cadastro
+        }
+        
+        for atributo in todos_atributos:
+            query_valor = text("""
+                SELECT VALOR FROM ATRIBUTOS 
+                WHERE ESTR_ENTIDADE_ID = :entidade_id 
+                AND ENTIDADE_ID_SEQ = :entidade_seq 
+                AND ESTR_ATRIBUTO_ID_SEQ = :atributo_seq
+            """)
+            valor_result = db.execute(query_valor, {
+                "entidade_id": entidade_id,
+                "entidade_seq": entidade_row.id_seq,
+                "atributo_seq": atributo.id_seq
+            }).first()
+            
+            instancia[f"valor_{atributo.nome_atributo}"] = valor_result.valor if valor_result else None
+        
+        instancias.append(instancia)
+    
+    query_total = text("SELECT COUNT(*) as total FROM ENTIDADE WHERE ESTR_ENTIDADE_ID = :entidade_id")
+    total_instancias = db.execute(query_total, {"entidade_id": entidade_id}).scalar()
+    
+    total_paginas = (total_instancias + limite - 1) // limite if total_instancias > 0 else 1
+    pagina_atual = (passo // limite) + 1
+
+    contexto = {
+        "request": request,
+        "projeto": projeto,
+        "entidade": entidade,
+        "instancias": instancias,
+        "todos_atributos": todos_atributos,
+        "atributo_exibicao": atributo_exibicao,
+        "outros_atributos": outros_atributos,
+        "total_instancias": total_instancias,
+        "pagina_atual": pagina_atual,
+        "total_paginas": total_paginas,
+        "limite": limite,
+        "has_previous": passo > 0,
+        "has_next": pagina_atual < total_paginas,
+        "previous_page": max(1, pagina_atual - 1),
+        "next_page": min(total_paginas, pagina_atual + 1),
+        "success_message": success_message,
+        "error_message": error_message,
+        "usuario": current_user
+    }
+    
+    return templates.TemplateResponse("instancias.html", contexto)
+
+@router.post("/{projeto_id}/entidades/{entidade_id}/instancias/criar")
+async def criar_instancia(
+    projeto_id: int,
+    entidade_id: int,
+    request: Request,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT ee.ID FROM ESTR_ENTIDADE ee
+            INNER JOIN PROJETO p ON ee.PROJETO_ID = p.ID
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE ee.ID = :entidade_id AND p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"entidade_id": entidade_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(url="/projetos/?error_message=Entidade não encontrada", status_code=303)
+        
+        query_max_seq = text("SELECT COALESCE(MAX(ID_SEQ), 0) + 1 as next_seq FROM ENTIDADE WHERE ESTR_ENTIDADE_ID = :entidade_id")
+        next_seq = db.execute(query_max_seq, {"entidade_id": entidade_id}).scalar()
+        
+        query_criar_entidade = text("INSERT INTO ENTIDADE (ID_SEQ, ESTR_ENTIDADE_ID) VALUES (:id_seq, :entidade_id)")
+        db.execute(query_criar_entidade, {"id_seq": next_seq, "entidade_id": entidade_id})
+        
+        query_atributos = text("""
+            SELECT ID_SEQ, NOME_ATRIBUTO, OBRIGATORIO
+            FROM ESTR_ATRIBUTOS 
+            WHERE ESTR_ENTIDADE_ID = :entidade_id
+        """)
+        atributos = db.execute(query_atributos, {"entidade_id": entidade_id}).fetchall()
+        
+        form_data = await request.form()
+        
+        for atributo in atributos:
+            valor = form_data.get(atributo.nome_atributo)
+            
+            if atributo.obrigatorio and not valor:
+                return RedirectResponse(
+                    url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Campo {atributo.nome_atributo} é obrigatório", 
+                    status_code=303
+                )
+            
+            if valor:
+                query_inserir_valor = text("""
+                    INSERT INTO ATRIBUTOS (ESTR_ENTIDADE_ID, ENTIDADE_ID_SEQ, ESTR_ATRIBUTO_ID_SEQ, VALOR)
+                    VALUES (:entidade_id, :entidade_seq, :atributo_seq, :valor)
+                """)
+                db.execute(query_inserir_valor, {
+                    "entidade_id": entidade_id,
+                    "entidade_seq": next_seq,
+                    "atributo_seq": atributo.id_seq,
+                    "valor": valor
+                })
+        
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?success_message=Instância criada com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Erro ao criar instância", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/entidades/{entidade_id}/instancias/editar/{instancia_id}")
+async def editar_instancia(
+    projeto_id: int,
+    entidade_id: int,
+    instancia_id: int,
+    request: Request,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT e.ID_SEQ FROM ENTIDADE e
+            INNER JOIN ESTR_ENTIDADE ee ON e.ESTR_ENTIDADE_ID = ee.ID
+            INNER JOIN PROJETO p ON ee.PROJETO_ID = p.ID
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE e.ID_SEQ = :instancia_id AND e.ESTR_ENTIDADE_ID = :entidade_id 
+            AND ee.ID = :entidade_id AND p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"instancia_id": instancia_id, "entidade_id": entidade_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Instância não encontrada", 
+                status_code=303
+            )
+        
+        query_atributos = text("""
+            SELECT ID_SEQ, NOME_ATRIBUTO, OBRIGATORIO, EDITAVEL
+            FROM ESTR_ATRIBUTOS 
+            WHERE ESTR_ENTIDADE_ID = :entidade_id
+        """)
+        atributos = db.execute(query_atributos, {"entidade_id": entidade_id}).fetchall()
+        
+        form_data = await request.form()
+        
+        for atributo in atributos:
+            if not atributo.editavel:
+                continue
+                
+            valor = form_data.get(atributo.nome_atributo)
+            
+            if atributo.obrigatorio and not valor:
+                return RedirectResponse(
+                    url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Campo {atributo.nome_atributo} é obrigatório", 
+                    status_code=303
+                )
+            
+            query_delete_valor = text("""
+                DELETE FROM ATRIBUTOS 
+                WHERE ESTR_ENTIDADE_ID = :entidade_id 
+                AND ENTIDADE_ID_SEQ = :instancia_id 
+                AND ESTR_ATRIBUTO_ID_SEQ = :atributo_seq
+            """)
+            db.execute(query_delete_valor, {
+                "entidade_id": entidade_id,
+                "instancia_id": instancia_id,
+                "atributo_seq": atributo.id_seq
+            })
+            
+            if valor:
+                query_inserir_valor = text("""
+                    INSERT INTO ATRIBUTOS (ESTR_ENTIDADE_ID, ENTIDADE_ID_SEQ, ESTR_ATRIBUTO_ID_SEQ, VALOR)
+                    VALUES (:entidade_id, :instancia_id, :atributo_seq, :valor)
+                """)
+                db.execute(query_inserir_valor, {
+                    "entidade_id": entidade_id,
+                    "instancia_id": instancia_id,
+                    "atributo_seq": atributo.id_seq,
+                    "valor": valor
+                })
+        
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?success_message=Instância atualizada com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Erro ao atualizar instância", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/entidades/{entidade_id}/instancias/deletar/{instancia_id}")
+def deletar_instancia(
+    projeto_id: int,
+    entidade_id: int,
+    instancia_id: int,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        query_verificar = text("""
+            SELECT e.ID_SEQ FROM ENTIDADE e
+            INNER JOIN ESTR_ENTIDADE ee ON e.ESTR_ENTIDADE_ID = ee.ID
+            INNER JOIN PROJETO p ON ee.PROJETO_ID = p.ID
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE e.ID_SEQ = :instancia_id AND e.ESTR_ENTIDADE_ID = :entidade_id 
+            AND ee.ID = :entidade_id AND p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar, {"instancia_id": instancia_id, "entidade_id": entidade_id, "projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Instância não encontrada", 
+                status_code=303
+            )
+        
+        query_delete = text("DELETE FROM ENTIDADE WHERE ID_SEQ = :instancia_id AND ESTR_ENTIDADE_ID = :entidade_id")
+        db.execute(query_delete, {"instancia_id": instancia_id, "entidade_id": entidade_id})
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?success_message=Instância excluída com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/entidades/{entidade_id}/instancias?error_message=Erro ao excluir instância", 
+            status_code=303
+        )
