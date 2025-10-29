@@ -117,14 +117,14 @@
                         </td>
                         <td class="px-4 py-3 text-center">
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-dark btn-editar" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#modalEditar"
-                                        data-id="{{ instancia.id_seq }}"
-                                        {% for atributo in todos_atributos %}
-                                        data-{{ atributo.nome_atributo }}="{{ instancia.get('valor_' + atributo.nome_atributo, '') }}"
-                                        {% endfor %}
-                                        title="Editar">
+                               <button class="btn btn-outline-dark btn-editar" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalEditar"
+                                    data-id="{{ instancia.id_seq }}"
+                                    {% for atributo in todos_atributos %}
+                                    data-{{ atributo.nome_atributo|replace(' ', '_') }}="{{ instancia.get('valor_' + atributo.nome_atributo, '') }}"
+                                    {% endfor %}
+                                    title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button class="btn btn-outline-danger btn-excluir" 
@@ -319,7 +319,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-outline-purple">
+                    <button type="submit" class="btn btn-outline-success">
                         <i class="bi bi-check me-1"></i>Salvar Alterações
                     </button>
                 </div>
@@ -385,13 +385,27 @@
                 
                 document.getElementById('formEditar').action = '/projetos/' + projetoId + '/entidades/' + entidadeId + '/instancias/editar/' + id;
                 
-                atributos.forEach(function(nomeAtributo) {
-                    const valor = btn.getAttribute('data-' + nomeAtributo);
-                    const campo = document.getElementById('edit' + nomeAtributo);
-                    if (campo) {
+               atributos.forEach(function(nomeAtributo) {
+                const atributoKey = nomeAtributo.replace(/ /g, '_');
+                const valor = btn.getAttribute('data-' + atributoKey);
+                const campo = document.getElementById('edit' + nomeAtributo);
+                if (campo) {
+                    if (campo.type === 'number') {
+                        const valorLimpo = valor ? valor.toString().trim() : '';
+                        campo.value = valorLimpo && !isNaN(parseFloat(valorLimpo)) ? valorLimpo : '';
+                    } else if (campo.tagName === 'SELECT') {
+                        if (valor === 'true') {
+                            campo.value = 'true';
+                        } else if (valor === 'false') {
+                            campo.value = 'false';
+                        } else {
+                            campo.value = '';
+                        }
+                    } else {
                         campo.value = valor || '';
                     }
-                });
+                }
+            });
             });
         });
 
