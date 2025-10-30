@@ -1327,3 +1327,175 @@ def deletar_valor_padrao_pergunta(
             url=f"/projetos/{projeto_id}/perguntas/{pergunta_id}/valores-padrao?error_message=Erro ao remover valor padrão", 
             status_code=303
         )
+    
+# Endpoints de liberações de usuários
+
+@router.get("/{projeto_id}/liberacoes", response_class=HTMLResponse)
+def listar_liberacoes_projeto(
+    projeto_id: int,
+    request: Request,
+    success_message: Optional[str] = None,
+    error_message: Optional[str] = None,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    # Verificar se o usuário tem acesso ao projeto
+    query_verificar_projeto = text("""
+        SELECT p.ID, p.NOME FROM PROJETO p 
+        INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+        WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+    """)
+    projeto = db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first()
+    
+    if not projeto:
+        return RedirectResponse(url="/projetos/?error_message=Projeto não encontrado", status_code=303)
+    
+    # Buscar usuários liberados no projeto
+    query_liberacoes = text("""
+        SELECT u.ID, u.NOME, u.EMAIL
+        FROM USUARIO u
+        INNER JOIN USUARIO_PROJETO up ON u.ID = up.USUARIO_ID
+        WHERE up.PROJETO_ID = :projeto_id
+        ORDER BY u.NOME
+    """)
+    liberacoes = db.execute(query_liberacoes, {"projeto_id": projeto_id}).fetchall()
+    
+    # Buscar usuários disponíveis para liberar (que não estão no projeto)
+    query_usuarios_disponiveis = text("""
+        SELECT u.ID, u.NOME, u.EMAIL
+        FROM USUARIO u
+        WHERE u.ID NOT IN (
+            SELECT up.USUARIO_ID 
+            FROM USUARIO_PROJETO up 
+            WHERE up.PROJETO_ID = :projeto_id
+        )
+        ORDER BY u.NOME
+    """)
+    usuarios_disponiveis = db.execute(query_usuarios_disponiveis, {"projeto_id": projeto_id}).fetchall()
+
+    contexto = {
+        "request": request,
+        "projeto": projeto,
+        "liberacoes": liberacoes,
+        "usuarios_disponiveis": usuarios_disponiveis,
+        "total_liberacoes": len(liberacoes),
+        "success_message": success_message,
+        "error_message": error_message,
+        "usuario": current_user
+    }
+    
+    return templates.TemplateResponse("liberacoes_projeto.html", contexto)
+
+@router.post("/{projeto_id}/liberacoes/adicionar")
+def adicionar_liberacao_usuario(
+    projeto_id: int,
+    usuario_id: int = Form(...),
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verificar se o usuário tem acesso ao projeto
+        query_verificar_projeto = text("""
+            SELECT p.ID FROM PROJETO p 
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/liberacoes?error_message=Projeto não encontrado", 
+                status_code=303
+            )
+        
+        # Verificar se o usuário existe
+        query_verificar_usuario = text("SELECT ID FROM USUARIO WHERE ID = :usuario_id")
+        if not db.execute(query_verificar_usuario, {"usuario_id": usuario_id}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/liberacoes?error_message=Usuário não encontrado", 
+                status_code=303
+            )
+        
+        # Verificar se o usuário já está liberado no projeto
+        query_verificar_liberacao = text("""
+            SELECT USUARIO_ID FROM USUARIO_PROJETO 
+            WHERE PROJETO_ID = :projeto_id AND USUARIO_ID = :usuario_id
+        """)
+        if db.execute(query_verificar_liberacao, {"projeto_id": projeto_id, "usuario_id": usuario_id}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/liberacoes?error_message=Usuário já está liberado neste projeto", 
+                status_code=303
+            )
+        
+        # Adicionar liberação
+        query_inserir = text("""
+            INSERT INTO USUARIO_PROJETO (USUARIO_ID, PROJETO_ID) 
+            VALUES (:usuario_id, :projeto_id)
+        """)
+        db.execute(query_inserir, {
+            "usuario_id": usuario_id, 
+            "projeto_id": projeto_id
+        })
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/liberacoes?success_message=Usuário liberado com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/liberacoes?error_message=Erro ao liberar usuário", 
+            status_code=303
+        )
+
+@router.post("/{projeto_id}/liberacoes/remover/{usuario_id}")
+def remover_liberacao_usuario(
+    projeto_id: int,
+    usuario_id: int,
+    current_user = Depends(get_usuario_autenticado),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verificar se o usuário tem acesso ao projeto
+        query_verificar_projeto = text("""
+            SELECT p.ID FROM PROJETO p 
+            INNER JOIN USUARIO_PROJETO up ON p.ID = up.PROJETO_ID 
+            WHERE p.ID = :projeto_id AND up.USUARIO_ID = :usuario_id
+        """)
+        if not db.execute(query_verificar_projeto, {"projeto_id": projeto_id, "usuario_id": current_user['id']}).first():
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/liberacoes?error_message=Projeto não encontrado", 
+                status_code=303
+            )
+        
+        # Não permitir que o usuário remova a própria liberação
+        if usuario_id == current_user['id']:
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/liberacoes?error_message=Você não pode remover sua própria liberação", 
+                status_code=303
+            )
+        
+        # Remover liberação
+        query_remover = text("""
+            DELETE FROM USUARIO_PROJETO 
+            WHERE PROJETO_ID = :projeto_id AND USUARIO_ID = :usuario_id
+        """)
+        result = db.execute(query_remover, {"projeto_id": projeto_id, "usuario_id": usuario_id})
+        
+        if result.rowcount == 0:
+            return RedirectResponse(
+                url=f"/projetos/{projeto_id}/liberacoes?error_message=Liberação não encontrada", 
+                status_code=303
+            )
+        
+        db.commit()
+        
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/liberacoes?success_message=Liberação removida com sucesso", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/projetos/{projeto_id}/liberacoes?error_message=Erro ao remover liberação", 
+            status_code=303
+        )

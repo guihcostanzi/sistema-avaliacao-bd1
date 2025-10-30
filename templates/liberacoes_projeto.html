@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Liberações de Usuários - {{ projeto.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/projetos/">Projetos</a></li>
+                <li class="breadcrumb-item"><a href="/projetos/{{ projeto.id }}/perguntas">{{ projeto.nome }}</a></li>
+                <li class="breadcrumb-item active">Liberações</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-people me-2 text-purple"></i>Liberações de Usuários
+        </h1>
+        <p class="text-muted mb-0">Gerencie quais usuários têm acesso ao projeto</p>
+    </div>
+    {% if usuarios_disponiveis %}
+    <button class="btn btn-outline-purple" data-bs-toggle="modal" data-bs-target="#modalAdicionar">
+        <i class="bi bi-person-plus me-1"></i>Liberar Usuário
+    </button>
+    {% endif %}
+</div>
+
+<div class="row g-3 my-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-purple shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">
+                            Usuários Liberados
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_liberacoes }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Usuários Disponíveis
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ usuarios_disponiveis|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-plus text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-purple">
+            <i class="bi bi-list me-1"></i>Lista de Usuários Liberados
+        </h6>
+        <small class="text-muted">
+            {% if liberacoes %}
+                {{ total_liberacoes }} usuário(s) liberado(s)
+            {% endif %}
+        </small>
+    </div>
+    <div class="card-body p-0">
+        {% if liberacoes %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Usuário</span>
+                        </th>
+                        <th class="border-0 px-4 py-3">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Email</span>
+                        </th>
+                        <th class="border-0 px-4 py-3 text-center" style="width: 120px;">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Ações</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for liberacao in liberacoes %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-purple rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-person text-white"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ liberacao.nome }}</strong>
+                                    {% if liberacao.id == usuario.id %}
+                                        <span class="badge bg-success ms-2">Você</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-muted">{{ liberacao.email }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if liberacao.id != usuario.id %}
+                            <button class="btn btn-outline-danger btn-sm btn-remover" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalRemover"
+                                    data-id="{{ liberacao.id }}"
+                                    data-nome="{{ liberacao.nome }}"
+                                    title="Remover Liberação">
+                                <i class="bi bi-person-dash"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Nenhum usuário liberado</h5>
+            <p class="text-muted">Comece liberando usuários para acessar este projeto</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if usuarios_disponiveis %}
+<!-- Modal Adicionar -->
+<div class="modal fade" id="modalAdicionar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/projetos/{{ projeto.id }}/liberacoes/adicionar">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus me-2"></i>Liberar Usuário
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Projeto:</strong></label>
+                        <p class="text-muted">{{ projeto.nome }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuario_id" class="form-label">Selecionar Usuário <span class="text-danger">*</span></label>
+                        <select class="form-control" name="usuario_id" id="usuario_id" required>
+                            <option value="">Selecione um usuário</option>
+                            {% for usuario_disp in usuarios_disponiveis %}
+                            <option value="{{ usuario_disp.id }}">{{ usuario_disp.nome }} ({{ usuario_disp.email }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">O usuário selecionado terá acesso completo ao projeto</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-purple">
+                        <i class="bi bi-check me-1"></i>Liberar Usuário
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Remover -->
+<div class="modal fade" id="modalRemover" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="formRemover">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Remover Liberação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Atenção!</strong> O usuário perderá acesso ao projeto.
+                    </div>
+                    <p>Tem certeza que deseja remover a liberação do usuário <strong id="usuarioRemover"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-person-dash me-1"></i>Sim, Remover
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/template" id="config-data">
+{
+    "projetoId": {{ projeto.id }}
+}
+</script>
+
+<script>
+    var configData = JSON.parse(document.getElementById('config-data').textContent);
+    var projetoId = configData.projetoId;
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-remover').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const nome = this.getAttribute('data-nome');
+                
+                document.getElementById('formRemover').action = '/projetos/' + projetoId + '/liberacoes/remover/' + id;
+                document.getElementById('usuarioRemover').textContent = nome;
+            });
+        });
+
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const forms = modal.querySelectorAll('form');
+                forms.forEach(function(form) {
+                    form.reset();
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
