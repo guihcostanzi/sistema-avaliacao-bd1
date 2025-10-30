@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Formulário - {{ projeto.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/submissoes">Submissões</a></li>
+                <li class="breadcrumb-item active">{{ projeto.nome }}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-clipboard-check me-2 text-dark"></i>{{ projeto.nome }}
+        </h1>
+        <p class="text-muted mb-0">Preencha o formulário abaixo</p>
+    </div>
+</div>
+
+<div class="row justify-content-center my-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-dark">
+                    <i class="bi bi-form-text me-1"></i>Formulário de Submissão
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/submissoes/{{ projeto.id }}/enviar" id="formSubmissao">
+                    {% for pergunta in perguntas %}
+                    <div class="mb-4">
+                        <label for="pergunta_{{ pergunta.id }}" class="form-label">
+                            <strong>{{ pergunta.pergunta }}</strong>
+                        </label>
+                        
+                        {% if pergunta.tipo == 'texto' %}
+                            {% if pergunta.modelo == 'livre' %}
+                                <textarea class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}" 
+                                          rows="3" placeholder="Digite sua resposta..."></textarea>
+                            {% elif pergunta.modelo == 'pre-definido' %}
+                                <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                    <option value="">Selecione uma opção</option>
+                                    {% for valor in valores_padrao.get(pergunta.id, []) %}
+                                    <option value="{{ valor }}">{{ valor }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                            
+                        {% elif pergunta.tipo == 'numero' %}
+                            {% if pergunta.modelo == 'livre' %}
+                                <input type="number" class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}" 
+                                       placeholder="Digite um número" step="any">
+                            {% elif pergunta.modelo == 'pre-definido' %}
+                                <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                    <option value="">Selecione um número</option>
+                                    {% for valor in valores_padrao.get(pergunta.id, []) %}
+                                    <option value="{{ valor }}">{{ valor }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                                   
+                        {% elif pergunta.tipo == 'data' %}
+                            {% if pergunta.modelo == 'livre' %}
+                                <input type="date" class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                            {% elif pergunta.modelo == 'pre-definido' %}
+                                <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                    <option value="">Selecione uma data</option>
+                                    {% for valor in valores_padrao.get(pergunta.id, []) %}
+                                    <option value="{{ valor }}">{{ valor }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                                   
+                        {% elif pergunta.tipo == 'email' %}
+                            {% if pergunta.modelo == 'livre' %}
+                                <input type="email" class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}" 
+                                       placeholder="exemplo@email.com">
+                            {% elif pergunta.modelo == 'pre-definido' %}
+                                <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                    <option value="">Selecione um email</option>
+                                    {% for valor in valores_padrao.get(pergunta.id, []) %}
+                                    <option value="{{ valor }}">{{ valor }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                                   
+                        {% elif pergunta.tipo == 'booleano' %}
+                            {% if pergunta.modelo == 'livre' %}
+                                <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                    <option value="">Selecione</option>
+                                    <option value="true">Sim</option>
+                                    <option value="false">Não</option>
+                                </select>
+                            {% elif pergunta.modelo == 'pre-definido' %}
+                                <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                    <option value="">Selecione uma opção</option>
+                                    {% for valor in valores_padrao.get(pergunta.id, []) %}
+                                    <option value="{{ valor }}">{{ valor }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <!-- Seleção de Entidade (se pergunta estiver vinculada a uma entidade) -->
+                        {% if pergunta.estr_entidade_id and valores_entidade.get(pergunta.id) %}
+                        <select class="form-control mt-2" name="entidade_{{ pergunta.id }}" id="entidade_{{ pergunta.id }}">
+                            <option value="">Selecione uma entidade</option>
+                            {% for entidade in valores_entidade.get(pergunta.id, []) %}
+                            <option value="{{ entidade.id }}">{{ entidade.text }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-info">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Esta pergunta está vinculada a uma entidade. Selecione uma das opções disponíveis.
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Avisos para configurações faltantes -->
+                        {% if pergunta.modelo == 'pre-definido' and not valores_padrao.get(pergunta.id) %}
+                        <div class="form-text text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Esta pergunta não possui valores pré-definidos configurados
+                        </div>
+                        {% endif %}
+                        
+                        {% if pergunta.estr_entidade_id and not valores_entidade.get(pergunta.id) %}
+                        <div class="form-text text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Esta pergunta está vinculada a uma entidade, mas não há entidades cadastradas
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="/submissoes" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-left me-1"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-outline-dark">
+                            <i class="bi bi-check me-1"></i>Enviar Submissão
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

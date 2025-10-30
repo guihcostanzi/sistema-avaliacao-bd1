@@ -34,8 +34,15 @@
                 </li>
                 <li>
                     <a href="{{url_for('listar_projetos')}}" class="nav-link {% if '/projetos/' in request.url.path %}active{% endif %}">
-                        <i class="bi bi-folder-fill"></i>
+                        <i class="bi bi-folder-fill me-2"></i>
                         <span>Projetos</span>
+                    </a>
+                </li>
+
+                 <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('listar_projetos_submissao')}}">
+                        <i class="bi bi-clipboard-check me-2"></i>
+                        <span>Submissões</span>
                     </a>
                 </li>
                 

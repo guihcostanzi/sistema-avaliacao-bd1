@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Submissões - {{ projeto.nome }}{% endblock %}
+
+{% block extra_css %}
+<link href="/static/css/pages/historico_submissoes.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/submissoes">Submissões</a></li>
+                <li class="breadcrumb-item active">{{ projeto.nome }}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-clock-history me-2 text-purple"></i>Histórico de Submissões
+        </h1>
+        <p class="text-muted mb-0">{{ projeto.nome }}</p>
+    </div>
+    <a href="/submissoes/{{ projeto.id }}/formulario" class="btn btn-outline-purple">
+        <i class="bi bi-plus me-1"></i>Nova Submissão
+    </a>
+</div>
+
+<div class="row g-3 my-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-purple shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">
+                            Total de Submissões
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ submissoes|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clipboard-check text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total de Perguntas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ perguntas|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-question-circle text-gray-300" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-purple">
+            <i class="bi bi-table me-1"></i>Dados das Submissões
+        </h6>
+        <small class="text-muted">
+            {% if submissoes %}
+                {{ submissoes|length }} submissão(ões) × {{ perguntas|length }} pergunta(s)
+            {% endif %}
+        </small>
+    </div>
+    <div class="card-body p-0">
+        {% if submissoes and perguntas %}
+        <div class="table-responsive-custom">
+            <table class="table table-hover table-bordered mb-0 wide-table">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th class="border px-3 py-3 text-center sticky-col-1">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">ID</span>
+                        </th>
+                        <th class="border px-3 py-3 text-center sticky-col-2">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">Data/Hora</span>
+                        </th>
+                        {% for pergunta in perguntas %}
+                        <th class="border px-3 py-3 text-center question-col">
+                            <span class="text-xs font-weight-bold text-purple text-uppercase">{{ pergunta.pergunta }}</span>
+                            <br>
+                            <small class="text-muted">({{ pergunta.tipo }})</small>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for submissao in submissoes %}
+                    <tr>
+                        <td class="border px-3 py-3 text-center font-weight-bold sticky-col-1">
+                            #{{ submissao.id }}
+                        </td>
+                        <td class="border px-3 py-3 text-center sticky-col-2">
+                            <strong>{{ submissao.data_cadastro.strftime('%d/%m/%Y') }}</strong>
+                            <br>
+                            <small class="text-muted">{{ submissao.data_cadastro.strftime('%H:%M') }}</small>
+                        </td>
+                        {% for pergunta in perguntas %}
+                        <td class="border px-3 py-3">
+                            {% set resposta = submissao.respostas.get(pergunta.id) %}
+                            {% if resposta %}
+                                {% if pergunta.tipo == 'booleano' %}
+                                    {% if resposta.resposta == 'true' %}
+                                        <span class="badge bg-success">Sim</span>
+                                    {% elif resposta.resposta == 'false' %}
+                                        <span class="badge bg-danger">Não</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ resposta.resposta }}</span>
+                                    {% endif %}
+                                {% elif pergunta.tipo == 'numero' %}
+                                    <span class="badge bg-info">{{ resposta.resposta }}</span>
+                                {% elif pergunta.tipo == 'data' %}
+                                    {% if resposta.resposta and '-' in resposta.resposta %}
+                                        {% set partes = resposta.resposta.split('-') %}
+                                        <span class="badge bg-warning text-dark">{{ partes[1] }}/{{ partes[2] }}/{{ partes[0] }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">{{ resposta.resposta }}</span>
+                                    {% endif %}
+                                {% elif pergunta.tipo == 'email' %}
+                                    <a href="mailto:{{ resposta.resposta }}" class="text-decoration-none">{{ resposta.resposta }}</a>
+                                {% else %}
+                                    <span class="text-break">{{ resposta.resposta }}</span>
+                                {% endif %}
+                                
+                                {% if resposta.entidade_info %}
+                                <br>
+                                <small class="text-info">
+                                    <i class="bi bi-link me-1"></i>{{ resposta.entidade_info }}
+                                </small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted fst-italic">Não respondido</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Nenhuma submissão encontrada</h5>
+            <p class="text-muted">Você ainda não fez nenhuma submissão para este projeto</p>
+            <a href="/submissoes/{{ projeto.id }}/formulario" class="btn btn-outline-purple">
+                <i class="bi bi-plus me-1"></i>Fazer Primeira Submissão
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
