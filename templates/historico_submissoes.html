@@ -20,7 +20,7 @@
         </h1>
         <p class="text-muted mb-0">{{ projeto.nome }}</p>
     </div>
-    <a href="/submissoes/{{ projeto.id }}/formulario" class="btn btn-outline-purple">
+    <a href="/submissoes/{{ projeto.id }}/formulario" class="btn btn-outline-dark">
         <i class="bi bi-plus me-1"></i>Nova Submissão
     </a>
 </div>
@@ -128,15 +128,10 @@
                                     {% endif %}
                                 {% elif pergunta.tipo == 'email' %}
                                     <a href="mailto:{{ resposta.resposta }}" class="text-decoration-none">{{ resposta.resposta }}</a>
+                                {% elif pergunta.tipo == 'entidade' %}
+                                        <i class="bi bi-link me-1"></i>{{ resposta.entidade_info }}
                                 {% else %}
                                     <span class="text-break">{{ resposta.resposta }}</span>
-                                {% endif %}
-                                
-                                {% if resposta.entidade_info %}
-                                <br>
-                                <small class="text-info">
-                                    <i class="bi bi-link me-1"></i>{{ resposta.entidade_info }}
-                                </small>
                                 {% endif %}
                             {% else %}
                                 <span class="text-muted fst-italic">Não respondido</span>

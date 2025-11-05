@@ -34,7 +34,20 @@
                             <strong>{{ pergunta.pergunta }}</strong>
                         </label>
                         
-                        {% if pergunta.tipo == 'texto' %}
+                       {% if pergunta.tipo == 'entidade' %}
+                            <!-- Campo específico para entidades -->
+                            <select class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}">
+                                <option value="">Selecione uma entidade</option>
+                                {% for entidade in valores_entidade.get(pergunta.id, []) %}
+                                <option value="{{ entidade.id }}">{{ entidade.text }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text text-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Esta pergunta está vinculada a uma entidade. Selecione uma das opções disponíveis.
+                            </div>
+                            
+                        {% elif pergunta.tipo == 'texto' %}
                             {% if pergunta.modelo == 'livre' %}
                                 <textarea class="form-control" name="pergunta_{{ pergunta.id }}" id="pergunta_{{ pergunta.id }}" 
                                           rows="3" placeholder="Digite sua resposta..."></textarea>
@@ -102,20 +115,6 @@
                             {% endif %}
                         {% endif %}
                         
-                        <!-- Seleção de Entidade (se pergunta estiver vinculada a uma entidade) -->
-                        {% if pergunta.estr_entidade_id and valores_entidade.get(pergunta.id) %}
-                        <select class="form-control mt-2" name="entidade_{{ pergunta.id }}" id="entidade_{{ pergunta.id }}">
-                            <option value="">Selecione uma entidade</option>
-                            {% for entidade in valores_entidade.get(pergunta.id, []) %}
-                            <option value="{{ entidade.id }}">{{ entidade.text }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text text-info">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Esta pergunta está vinculada a uma entidade. Selecione uma das opções disponíveis.
-                        </div>
-                        {% endif %}
-                        
                         <!-- Avisos para configurações faltantes -->
                         {% if pergunta.modelo == 'pre-definido' and not valores_padrao.get(pergunta.id) %}
                         <div class="form-text text-warning">
@@ -124,7 +123,7 @@
                         </div>
                         {% endif %}
                         
-                        {% if pergunta.estr_entidade_id and not valores_entidade.get(pergunta.id) %}
+                        {% if pergunta.tipo == 'entidade' and not valores_entidade.get(pergunta.id) %}
                         <div class="form-text text-warning">
                             <i class="bi bi-exclamation-triangle me-1"></i>
                             Esta pergunta está vinculada a uma entidade, mas não há entidades cadastradas
