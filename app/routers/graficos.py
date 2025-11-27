@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional, List, Dict, Any
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 
 from app.db.database import get_db
@@ -82,6 +82,7 @@ async def gerar_grafico(
         tipo_grafico = form_data.get("tipo_grafico")
         pergunta_x = form_data.get("pergunta_x")
         pergunta_y = form_data.get("pergunta_y")
+        agregacao_y = form_data.get("agregacao_y", "soma")  # NOVO: soma ou contagem
         
         # Validações básicas
         if not tipo_grafico:
@@ -119,7 +120,7 @@ async def gerar_grafico(
         
         # Gerar dados do gráfico
         dados_grafico = gerar_dados_grafico(
-            db, projeto_id, tipo_grafico, pergunta_x, pergunta_y, perguntas_info
+            db, projeto_id, tipo_grafico, pergunta_x, pergunta_y, perguntas_info, agregacao_y
         )
         
         return JSONResponse(dados_grafico)
@@ -151,9 +152,6 @@ def validar_compatibilidade_grafico(tipo_grafico: str, perguntas_info: Dict, per
         if not pergunta_x_info or not pergunta_y_info:
             return {"erro": "Uma ou ambas perguntas não foram encontradas"}
         
-        if pergunta_y_info.tipo not in ['numero'] and pergunta_x_info.tipo == pergunta_y_info.tipo:
-            return {"erro": "Para gráfico de barras com dois campos não numéricos, eles devem ser diferentes para permitir contagem"}
-        
         return {"erro": None}
     
     elif tipo_grafico == "line":
@@ -166,9 +164,6 @@ def validar_compatibilidade_grafico(tipo_grafico: str, perguntas_info: Dict, per
         if not pergunta_x_info or not pergunta_y_info:
             return {"erro": "Uma ou ambas perguntas não foram encontradas"}
         
-        if pergunta_x_info.tipo not in ['data', 'numero'] and pergunta_y_info.tipo not in ['numero']:
-            return {"erro": "Gráfico de linha funciona melhor com X sendo data/número e Y sendo numérico"}
-        
         return {"erro": None}
     
     elif tipo_grafico == "scatter":
@@ -176,24 +171,29 @@ def validar_compatibilidade_grafico(tipo_grafico: str, perguntas_info: Dict, per
         if not pergunta_info:
             return {"erro": "Pergunta não encontrada"}
         
-        if pergunta_info.tipo not in ['numero', 'data']:
-            return {"erro": "Gráfico de dispersão funciona melhor com dados numéricos ou de data"}
-        
         return {"erro": None}
     
     return {"erro": "Tipo de gráfico não suportado"}
 
-def gerar_dados_grafico(db: Session, projeto_id: int, tipo_grafico: str, pergunta_x: str, pergunta_y: str = None, perguntas_info: Dict = None) -> Dict[str, Any]:
+def gerar_dados_grafico(db: Session, projeto_id: int, tipo_grafico: str, pergunta_x: str, pergunta_y: str = None, perguntas_info: Dict = None, agregacao_y: str = "soma") -> Dict[str, Any]:
     """Gera os dados específicos para cada tipo de gráfico"""
     
     if tipo_grafico == "pie":
         return gerar_dados_pizza(db, projeto_id, pergunta_x, perguntas_info)
     elif tipo_grafico == "bar":
-        return gerar_dados_barras(db, projeto_id, pergunta_x, pergunta_y, perguntas_info)
+        return gerar_dados_barras(db, projeto_id, pergunta_x, pergunta_y, perguntas_info, agregacao_y)
     elif tipo_grafico == "line":
-        return gerar_dados_linha(db, projeto_id, pergunta_x, pergunta_y, perguntas_info)
+        return gerar_dados_linha(db, projeto_id, pergunta_x, pergunta_y, perguntas_info, agregacao_y)
     elif tipo_grafico == "scatter":
         return gerar_dados_dispersao(db, projeto_id, pergunta_x, perguntas_info)
+
+def formatar_data_para_exibicao(data_str: str) -> str:
+    """Converte data de YYYY-MM-DD para DD/MM/YYYY"""
+    try:
+        data_obj = datetime.strptime(data_str, '%Y-%m-%d')
+        return data_obj.strftime('%d/%m/%Y')
+    except:
+        return data_str
 
 def gerar_dados_pizza(db: Session, projeto_id: int, pergunta_id: str, perguntas_info: Dict) -> Dict[str, Any]:
     """Gera dados para gráfico de pizza"""
@@ -214,8 +214,10 @@ def gerar_dados_pizza(db: Session, projeto_id: int, pergunta_id: str, perguntas_
     
     series_data = []
     for valor, count in contador.most_common():
+        # Formatar datas se necessário
+        valor_display = formatar_data_para_exibicao(valor) if pergunta_info.tipo == 'data' else str(valor)
         series_data.append({
-            "name": str(valor),
+            "name": valor_display,
             "data": count
         })
     
@@ -227,8 +229,8 @@ def gerar_dados_pizza(db: Session, projeto_id: int, pergunta_id: str, perguntas_
         "series": series_data
     }
 
-def gerar_dados_barras(db: Session, projeto_id: int, pergunta_x: str, pergunta_y: str, perguntas_info: Dict) -> Dict[str, Any]:
-    """Gera dados para gráfico de barras"""
+def gerar_dados_barras(db: Session, projeto_id: int, pergunta_x: str, pergunta_y: str, perguntas_info: Dict, agregacao_y: str = "soma") -> Dict[str, Any]:
+    """Gera dados para gráfico de barras com agregação configurável"""
     
     pergunta_x_info = perguntas_info[pergunta_x]
     pergunta_y_info = perguntas_info[pergunta_y]
@@ -251,46 +253,75 @@ def gerar_dados_barras(db: Session, projeto_id: int, pergunta_x: str, pergunta_y
         "pergunta_y": pergunta_y
     }).fetchall()
     
-    if pergunta_y_info.tipo == 'numero':
-        agrupados = {}
-        for row in dados:
-            x_val = str(row.x_valor)
-            y_val = float(row.y_valor) if row.y_valor else 0
-            
-            if x_val not in agrupados:
-                agrupados[x_val] = []
-            agrupados[x_val].append(y_val)
+    # Agrupar por X
+    agrupados = defaultdict(list)
+    
+    for row in dados:
+        x_val = row.x_valor
+        y_val = row.y_valor
         
-        categories = list(agrupados.keys())
-        values = [sum(vals)/len(vals) for vals in agrupados.values()]
+        # Formatar data para agrupamento (manter formato original para agrupamento)
+        x_key = x_val
+        agrupados[x_key].append(y_val)
+    
+    # Processar agregação
+    categories = []
+    values = []
+    
+    # Ordenar as chaves (especialmente importante para datas)
+    sorted_keys = sorted(agrupados.keys())
+    if pergunta_x_info.tipo == 'data':
+        try:
+            sorted_keys = sorted(agrupados.keys(), key=lambda x: datetime.strptime(x, '%Y-%m-%d'))
+        except:
+            sorted_keys = sorted(agrupados.keys())
+    
+    for x_key in sorted_keys:
+        y_valores = agrupados[x_key]
         
+        # Formatar chave para exibição
+        if pergunta_x_info.tipo == 'data':
+            x_display = formatar_data_para_exibicao(x_key)
+        else:
+            x_display = str(x_key)
+        
+        categories.append(x_display)
+        
+        # Aplicar agregação
+        if agregacao_y == "contagem":
+            values.append(len(y_valores))
+        else:  # soma (padrão)
+            if pergunta_y_info.tipo == 'numero':
+                # Somar valores numéricos
+                soma = sum(float(v) for v in y_valores if v)
+                values.append(soma)
+            else:
+                # Para não numéricos, contar ocorrências
+                values.append(len(y_valores))
+    
+    # Determinar label do eixo Y
+    if agregacao_y == "contagem":
+        y_label = f"Contagem de {pergunta_y_info.pergunta}"
     else:
-        contador = Counter([(row.x_valor, row.y_valor) for row in dados])
-        
-        agrupados = {}
-        for (x_val, y_val), count in contador.items():
-            x_str = str(x_val)
-            if x_str not in agrupados:
-                agrupados[x_str] = 0
-            agrupados[x_str] += count
-        
-        categories = list(agrupados.keys())
-        values = list(agrupados.values())
+        if pergunta_y_info.tipo == 'numero':
+            y_label = f"Soma de {pergunta_y_info.pergunta}"
+        else:
+            y_label = f"Contagem de {pergunta_y_info.pergunta}"
     
     return {
         "type": "bar",
         "title": {
-            "text": f"{pergunta_x_info.pergunta} vs {pergunta_y_info.pergunta}"
+            "text": f"{pergunta_x_info.pergunta} vs {y_label}"
         },
         "series": [{
-            "name": pergunta_y_info.pergunta,
+            "name": y_label,
             "data": values
         }],
         "categories": categories
     }
 
-def gerar_dados_linha(db: Session, projeto_id: int, pergunta_x: str, pergunta_y: str, perguntas_info: Dict) -> Dict[str, Any]:
-    """Gera dados para gráfico de linha"""
+def gerar_dados_linha(db: Session, projeto_id: int, pergunta_x: str, pergunta_y: str, perguntas_info: Dict, agregacao_y: str = "soma") -> Dict[str, Any]:
+    """Gera dados para gráfico de linha com agregação configurável"""
     
     pergunta_x_info = perguntas_info[pergunta_x]
     pergunta_y_info = perguntas_info[pergunta_y]
@@ -314,45 +345,63 @@ def gerar_dados_linha(db: Session, projeto_id: int, pergunta_x: str, pergunta_y:
         "pergunta_y": pergunta_y
     }).fetchall()
     
+    # Agrupar por X
+    agrupados = defaultdict(list)
+    
+    for row in dados:
+        x_val = row.x_valor
+        y_val = row.y_valor
+        agrupados[x_val].append(y_val)
+    
+    # Processar dados
+    categories = []
+    values = []
+    
+    # Ordenar as chaves
+    sorted_keys = sorted(agrupados.keys())
     if pergunta_x_info.tipo == 'data':
-        dados_processados = []
-        for row in dados:
-            try:
-                x_val = datetime.strptime(row.x_valor, '%Y-%m-%d').strftime('%m/%d/%Y')
-                y_val = float(row.y_valor) if pergunta_y_info.tipo == 'numero' else 1
-                dados_processados.append((x_val, y_val))
-            except:
-                continue
+        try:
+            sorted_keys = sorted(agrupados.keys(), key=lambda x: datetime.strptime(x, '%Y-%m-%d'))
+        except:
+            sorted_keys = sorted(agrupados.keys())
+    
+    for x_key in sorted_keys:
+        y_valores = agrupados[x_key]
         
-        agrupados = {}
-        for x_val, y_val in dados_processados:
-            if x_val not in agrupados:
-                agrupados[x_val] = []
-            agrupados[x_val].append(y_val)
+        # Formatar chave para exibição
+        if pergunta_x_info.tipo == 'data':
+            x_display = formatar_data_para_exibicao(x_key)
+        else:
+            x_display = str(x_key)
         
-        categories = sorted(agrupados.keys())
-        values = [sum(agrupados[cat])/len(agrupados[cat]) for cat in categories]
+        categories.append(x_display)
         
+        # Aplicar agregação
+        if agregacao_y == "contagem":
+            values.append(len(y_valores))
+        else:  # soma (padrão)
+            if pergunta_y_info.tipo == 'numero':
+                soma = sum(float(v) for v in y_valores if v)
+                values.append(soma)
+            else:
+                values.append(len(y_valores))
+    
+    # Determinar label do eixo Y
+    if agregacao_y == "contagem":
+        y_label = f"Contagem de {pergunta_y_info.pergunta}"
     else:
-        agrupados = {}
-        for row in dados:
-            x_val = str(row.x_valor)
-            y_val = float(row.y_valor) if pergunta_y_info.tipo == 'numero' else 1
-            
-            if x_val not in agrupados:
-                agrupados[x_val] = []
-            agrupados[x_val].append(y_val)
-        
-        categories = list(agrupados.keys())
-        values = [sum(vals)/len(vals) for vals in agrupados.values()]
+        if pergunta_y_info.tipo == 'numero':
+            y_label = f"Soma de {pergunta_y_info.pergunta}"
+        else:
+            y_label = f"Contagem de {pergunta_y_info.pergunta}"
     
     return {
         "type": "line",
         "title": {
-            "text": f"{pergunta_x_info.pergunta} ao longo de {pergunta_y_info.pergunta}"
+            "text": f"{pergunta_x_info.pergunta} ao longo do tempo"
         },
         "series": [{
-            "name": pergunta_y_info.pergunta,
+            "name": y_label,
             "data": values,
             "mode": "lines+markers"
         }],
@@ -365,7 +414,7 @@ def gerar_dados_dispersao(db: Session, projeto_id: int, pergunta_id: str, pergun
     pergunta_info = perguntas_info[pergunta_id]
     
     query = text("""
-        SELECT r.RESPOSTA, ROW_NUMBER() OVER (ORDER BY s.DATA_CADASTRO) as seq
+        SELECT r.RESPOSTA, s.DATA_CADASTRO
         FROM RESPOSTA r
         INNER JOIN SUBMISSAO s ON r.SUBMISSAO_ID = s.ID
         WHERE s.PROJETO_ID = :projeto_id AND r.PERGUNTA_ID = :pergunta_id
@@ -376,7 +425,7 @@ def gerar_dados_dispersao(db: Session, projeto_id: int, pergunta_id: str, pergun
     dados = db.execute(query, {"projeto_id": projeto_id, "pergunta_id": pergunta_id}).fetchall()
     
     scatter_data = []
-    for row in dados:
+    for i, row in enumerate(dados):
         try:
             if pergunta_info.tipo == 'numero':
                 y_val = float(row.resposta)
@@ -386,7 +435,7 @@ def gerar_dados_dispersao(db: Session, projeto_id: int, pergunta_id: str, pergun
             else:
                 y_val = hash(row.resposta) % 1000
             
-            scatter_data.append([int(row.seq), y_val])
+            scatter_data.append([i + 1, y_val])
         except:
             continue
     

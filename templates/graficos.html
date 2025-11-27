@@ -74,6 +74,22 @@
                         </select>
                     </div>
 
+                    <!-- Escolha da Agregação Y -->
+                    <div class="mb-3" id="div_agregacao_y" style="display: none;">
+                        <label for="agregacao_y" class="form-label">
+                            <strong>Agregação Y</strong>
+                            <span class="text-muted">(Como agrupar valores)</span>
+                        </label>
+                        <select class="form-control" id="agregacao_y" name="agregacao_y">
+                            <option value="soma">Soma (para números) / Contagem (para outros)</option>
+                            <option value="contagem">Contagem de ocorrências</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            <strong>Soma:</strong> Se Y é numérico, soma os valores. Ex: duas vendas de R$100 = R$200<br>
+                            <strong>Contagem:</strong> Conta quantas vezes o valor aparece. Ex: duas vendas = 2
+                        </small>
+                    </div>
+
                     <!-- Alertas de Validação -->
                     <div id="alerta_validacao" class="alert alert-warning" style="display: none;">
                         <i class="bi bi-exclamation-triangle me-1"></i>
@@ -238,6 +254,7 @@ document.getElementById('btn_limpar').addEventListener('click', function() {
 function atualizarInterface(tipo) {
     const config = tiposGrafico[tipo];
     const divY = document.getElementById('div_pergunta_y');
+    const divAgregacao = document.getElementById('div_agregacao_y');
     const labelX = document.getElementById('label_x_desc');
     const dicas = document.getElementById('dicas_grafico');
     const textoDicas = document.getElementById('texto_dicas');
@@ -246,9 +263,11 @@ function atualizarInterface(tipo) {
         // Mostrar/ocultar segunda pergunta
         if (config.perguntas === 2) {
             divY.style.display = 'block';
+            divAgregacao.style.display = 'block';
             document.getElementById('pergunta_y').required = true;
         } else {
             divY.style.display = 'none';
+            divAgregacao.style.display = 'none';
             document.getElementById('pergunta_y').required = false;
             document.getElementById('pergunta_y').value = '';
         }
@@ -261,6 +280,7 @@ function atualizarInterface(tipo) {
         dicas.style.display = 'block';
     } else {
         divY.style.display = 'none';
+        divAgregacao.style.display = 'none';
         dicas.style.display = 'none';
         document.getElementById('pergunta_y').required = false;
     }
@@ -276,29 +296,44 @@ function validarSelecao() {
     const textoValidacao = document.getElementById('texto_validacao');
     
     let erro = null;
+    let aviso = null;
     
     if (tipo && perguntaX.value) {
         const tipoX = perguntaX.selectedOptions[0]?.dataset.tipo;
         const tipoY = perguntaY.selectedOptions[0]?.dataset.tipo;
         
-        // Validações específicas por tipo de gráfico
         if (tipo === 'bar' && perguntaY.value) {
-            if (tipoX === tipoY && tipoX !== 'numero') {
-                erro = 'Para gráfico de barras, se ambas perguntas não são numéricas, devem ser de tipos diferentes.';
+            // Para barras, qualquer combinação funciona com agregação
+            if (tipoX === tipoY && tipoX === 'texto' && perguntaY.value === perguntaX.value) {
+                erro = 'Para gráfico de barras, selecione perguntas diferentes quando ambas são do mesmo tipo.';
+            } else if (tipoY !== 'numero') {
+                aviso = 'Dica: Com Y não numérico, será usado contagem. Para soma, escolha uma pergunta numérica no eixo Y.';
             }
         } else if (tipo === 'line' && perguntaY.value) {
-            if (tipoX !== 'data' && tipoX !== 'numero') {
-                erro = 'Para gráfico de linha, a primeira pergunta deveria ser data ou número.';
+            // Para linha, X idealmente deveria ser sequencial (data/número)
+            if (tipoX === 'texto' || tipoX === 'email' || tipoX === 'booleano') {
+                aviso = 'Dica: Gráfico de linha funciona melhor quando X é data ou número para mostrar tendência.';
             }
         } else if (tipo === 'scatter') {
-            if (tipoX !== 'numero' && tipoX !== 'data') {
-                erro = 'Gráfico de dispersão funciona melhor com dados numéricos ou de data.';
+            // Dispersão é mais flexível agora
+            if (tipoX === 'booleano') {
+                aviso = 'Dica: Gráfico de dispersão com dados booleanos pode ter visualização limitada.';
+            }
+        } else if (tipo === 'pie') {
+            // Pizza sempre funciona, mas dica para muitos valores únicos
+            if (tipoX === 'numero') {
+                aviso = 'Dica: Gráfico de pizza com números pode gerar muitas fatias. Considere agrupar os dados.';
             }
         }
     }
     
     if (erro) {
         textoValidacao.textContent = erro;
+        alerta.className = 'alert alert-danger';
+        alerta.style.display = 'block';
+    } else if (aviso) {
+        textoValidacao.textContent = aviso;
+        alerta.className = 'alert alert-warning';
         alerta.style.display = 'block';
     } else {
         alerta.style.display = 'none';
