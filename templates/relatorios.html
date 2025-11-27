@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Selecionar Projeto{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/">Início</a></li>
+                <li class="breadcrumb-item active">Relatórios</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-bar-chart me-2 text-primary"></i>Relatórios e Gráficos
+        </h1>
+        <p class="text-muted mb-0">Selecione um projeto para gerar gráficos dinâmicos</p>
+    </div>
+</div>
+
+<div class="row my-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-folder-fill me-1"></i>Escolha um Projeto
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if projetos %}
+                <div class="row g-4">
+                    {% for projeto in projetos %}
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 border-0 shadow-sm hover-shadow">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-folder text-primary" style="font-size: 3rem;"></i>
+                                </div>
+                                
+                                <h5 class="card-title">{{ projeto.nome }}</h5>
+                                <p class="card-text text-muted small mb-3">
+                                    Projeto disponível para análise de dados
+                                </p>
+                                
+                                <div class="mb-3">
+                                    <span class="badge bg-success">{{ projeto.total_submissoes }} submissões</span>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <a href="/graficos/{{ projeto.id }}" class="btn btn-primary">
+                                        <i class="bi bi-graph-up me-1"></i>Gerar Gráficos
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-folder-x text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">Nenhum projeto com dados</h5>
+                    <p class="text-muted">Não há projetos com submissões disponíveis para gerar gráficos.</p>
+                    <a href="/submissoes" class="btn btn-primary">
+                        <i class="bi bi-plus me-1"></i>Ver Projetos
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

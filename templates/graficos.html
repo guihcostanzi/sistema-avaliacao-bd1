@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Gráficos - {{ projeto.nome }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center py-4 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/submissoes">Submissões</a></li>
+                <li class="breadcrumb-item"><a href="/submissoes/{{ projeto.id }}/historico">{{ projeto.nome }}</a></li>
+                <li class="breadcrumb-item active">Gráficos</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-1 text-gray-800">
+            <i class="bi bi-graph-up me-2 text-primary"></i>Gráficos - {{ projeto.nome }}
+        </h1>
+        <p class="text-muted mb-0">Gere gráficos dinâmicos baseados nas submissões ({{ total_submissoes }} submissões)</p>
+    </div>
+</div>
+
+<div class="row my-4">
+    <!-- Painel de Configuração -->
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-gear me-1"></i>Configuração do Gráfico
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="formGrafico">
+                    <!-- Tipo de Gráfico -->
+                    <div class="mb-3">
+                        <label for="tipo_grafico" class="form-label">
+                            <strong>Tipo de Gráfico</strong>
+                        </label>
+                        <select class="form-control" id="tipo_grafico" name="tipo_grafico" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="pie">🍕 Pizza (1 pergunta)</option>
+                            <option value="bar">📊 Barras (2 perguntas)</option>
+                            <option value="line">📈 Linha (2 perguntas)</option>
+                            <option value="scatter">🔵 Dispersão (1 pergunta)</option>
+                        </select>
+                    </div>
+
+                    <!-- Pergunta X (Eixo X) -->
+                    <div class="mb-3">
+                        <label for="pergunta_x" class="form-label">
+                            <strong>Eixo X</strong>
+                        </label>
+                        <select class="form-control" id="pergunta_x" name="pergunta_x" required>
+                            <option value="">Selecione uma pergunta</option>
+                            {% for pergunta in perguntas %}
+                            <option value="{{ pergunta.id }}" data-tipo="{{ pergunta.tipo }}" data-modelo="{{ pergunta.modelo }}">
+                                {{ pergunta.pergunta }} ({{ pergunta.tipo|title }}) - {{ pergunta.total_submissoes }} respostas
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Pergunta Y (Eixo Y) -->
+                    <div class="mb-3" id="div_pergunta_y" style="display: none;">
+                        <label for="pergunta_y" class="form-label">
+                            <strong>Eixo Y</strong>
+                        </label>
+                        <select class="form-control" id="pergunta_y" name="pergunta_y">
+                            <option value="">Selecione uma pergunta</option>
+                            {% for pergunta in perguntas %}
+                            <option value="{{ pergunta.id }}" data-tipo="{{ pergunta.tipo }}" data-modelo="{{ pergunta.modelo }}">
+                                {{ pergunta.pergunta }} ({{ pergunta.tipo|title }}) - {{ pergunta.total_submissoes }} respostas
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Alertas de Validação -->
+                    <div id="alerta_validacao" class="alert alert-warning" style="display: none;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <span id="texto_validacao"></span>
+                    </div>
+
+                    <!-- Dicas por Tipo de Gráfico -->
+                    <div id="dicas_grafico" class="alert alert-info" style="display: none;">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <span id="texto_dicas"></span>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="btn_gerar">
+                            <i class="bi bi-graph-up me-1"></i>Gerar Gráfico
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btn_limpar">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Limpar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Estatísticas do Projeto -->
+        <div class="card shadow mt-3">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-info">
+                    <i class="bi bi-info-circle me-1"></i>Estatísticas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="text-primary">
+                            <i class="bi bi-question-circle fs-3"></i>
+                            <div class="fw-bold">{{ perguntas|length }}</div>
+                            <small class="text-muted">Perguntas</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-success">
+                            <i class="bi bi-clipboard-check fs-3"></i>
+                            <div class="fw-bold">{{ total_submissoes }}</div>
+                            <small class="text-muted">Submissões</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área do Gráfico -->
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="bi bi-graph-up me-1"></i>Visualização
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Estado Inicial -->
+                <div id="estado_inicial" class="text-center py-5">
+                    <i class="bi bi-graph-up text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">Configure um gráfico</h5>
+                    <p class="text-muted">Selecione o tipo de gráfico e as perguntas para visualizar os dados</p>
+                </div>
+
+                <!-- Loading -->
+                <div id="loading_grafico" class="text-center py-5" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <h5 class="text-muted mt-3">Gerando gráfico...</h5>
+                </div>
+
+                <!-- Área do Gráfico -->
+                <div id="area_grafico" style="display: none;">
+                    <div id="grafico_container" style="height: 400px;"></div>
+                    
+                    <!-- Controles do Gráfico -->
+                    <div class="mt-3 text-center">
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="downloadChart('png')">
+                            <i class="bi bi-download me-1"></i>PNG
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="downloadChart('svg')">
+                            <i class="bi bi-download me-1"></i>SVG
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetZoom()">
+                            <i class="bi bi-zoom-out me-1"></i>Reset Zoom
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Erro -->
+                <div id="erro_grafico" class="alert alert-danger" style="display: none;">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    <span id="texto_erro"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+let currentChart = null;
+
+// Configurações dos tipos de gráfico
+const tiposGrafico = {
+    'pie': {
+        nome: 'Pizza',
+        perguntas: 1,
+        dica: 'Mostra a distribuição de uma pergunta. Ideal para dados categóricos.',
+        labelX: 'Pergunta para Análise'
+    },
+    'bar': {
+        nome: 'Barras',
+        perguntas: 2,
+        dica: 'Compara valores entre categorias. X = categoria, Y = valor numérico ou contagem.',
+        labelX: 'Categorias (Eixo X)',
+        labelY: 'Valores (Eixo Y)'
+    },
+    'line': {
+        nome: 'Linha',
+        perguntas: 2,
+        dica: 'Mostra tendência ao longo do tempo ou sequência. Ideal quando X é data.',
+        labelX: 'Sequência (Eixo X)',
+        labelY: 'Valores (Eixo Y)'
+    },
+    'scatter': {
+        nome: 'Dispersão',
+        perguntas: 1,
+        dica: 'Mostra distribuição de valores ao longo do tempo. Ideal para dados numéricos.',
+        labelX: 'Pergunta para Análise'
+    }
+};
+
+// Event listeners
+document.getElementById('tipo_grafico').addEventListener('change', function() {
+    const tipo = this.value;
+    atualizarInterface(tipo);
+});
+
+document.getElementById('pergunta_x').addEventListener('change', validarSelecao);
+document.getElementById('pergunta_y').addEventListener('change', validarSelecao);
+
+document.getElementById('formGrafico').addEventListener('submit', function(e) {
+    e.preventDefault();
+    gerarGrafico();
+});
+
+document.getElementById('btn_limpar').addEventListener('click', function() {
+    document.getElementById('formGrafico').reset();
+    atualizarInterface('');
+    mostrarEstado('inicial');
+});
+
+function atualizarInterface(tipo) {
+    const config = tiposGrafico[tipo];
+    const divY = document.getElementById('div_pergunta_y');
+    const labelX = document.getElementById('label_x_desc');
+    const dicas = document.getElementById('dicas_grafico');
+    const textoDicas = document.getElementById('texto_dicas');
+    
+    if (config) {
+        // Mostrar/ocultar segunda pergunta
+        if (config.perguntas === 2) {
+            divY.style.display = 'block';
+            document.getElementById('pergunta_y').required = true;
+        } else {
+            divY.style.display = 'none';
+            document.getElementById('pergunta_y').required = false;
+            document.getElementById('pergunta_y').value = '';
+        }
+        
+        // Atualizar labels
+        labelX.textContent = `(${config.labelX || 'Eixo X'})`;
+        
+        // Mostrar dicas
+        textoDicas.textContent = config.dica;
+        dicas.style.display = 'block';
+    } else {
+        divY.style.display = 'none';
+        dicas.style.display = 'none';
+        document.getElementById('pergunta_y').required = false;
+    }
+    
+    validarSelecao();
+}
+
+function validarSelecao() {
+    const tipo = document.getElementById('tipo_grafico').value;
+    const perguntaX = document.getElementById('pergunta_x');
+    const perguntaY = document.getElementById('pergunta_y');
+    const alerta = document.getElementById('alerta_validacao');
+    const textoValidacao = document.getElementById('texto_validacao');
+    
+    let erro = null;
+    
+    if (tipo && perguntaX.value) {
+        const tipoX = perguntaX.selectedOptions[0]?.dataset.tipo;
+        const tipoY = perguntaY.selectedOptions[0]?.dataset.tipo;
+        
+        // Validações específicas por tipo de gráfico
+        if (tipo === 'bar' && perguntaY.value) {
+            if (tipoX === tipoY && tipoX !== 'numero') {
+                erro = 'Para gráfico de barras, se ambas perguntas não são numéricas, devem ser de tipos diferentes.';
+            }
+        } else if (tipo === 'line' && perguntaY.value) {
+            if (tipoX !== 'data' && tipoX !== 'numero') {
+                erro = 'Para gráfico de linha, a primeira pergunta deveria ser data ou número.';
+            }
+        } else if (tipo === 'scatter') {
+            if (tipoX !== 'numero' && tipoX !== 'data') {
+                erro = 'Gráfico de dispersão funciona melhor com dados numéricos ou de data.';
+            }
+        }
+    }
+    
+    if (erro) {
+        textoValidacao.textContent = erro;
+        alerta.style.display = 'block';
+    } else {
+        alerta.style.display = 'none';
+    }
+}
+
+async function gerarGrafico() {
+    const formData = new FormData(document.getElementById('formGrafico'));
+    
+    mostrarEstado('loading');
+    
+    try {
+        const response = await fetch(`/graficos/{{ projeto.id }}/gerar`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderizarGrafico(data);
+            mostrarEstado('grafico');
+        } else {
+            mostrarErro(data.error || 'Erro ao gerar gráfico');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarErro('Erro de conexão');
+    }
+}
+
+function renderizarGrafico(config) {
+    const container = document.getElementById('grafico_container');
+    
+    // Configuração base do Plotly
+    let data, layout;
+    
+    if (config.type === 'pie') {
+        data = [{
+            values: config.series.map(s => s.data),
+            labels: config.series.map(s => s.name),
+            type: 'pie',
+            hole: 0.3,
+            textinfo: 'label+percent',
+            textposition: 'outside'
+        }];
+    } else if (config.type === 'bar') {
+        data = config.series.map(serie => ({
+            x: config.categories,
+            y: serie.data,
+            name: serie.name,
+            type: 'bar'
+        }));
+    } else if (config.type === 'line') {
+        data = config.series.map(serie => ({
+            x: config.categories,
+            y: serie.data,
+            name: serie.name,
+            type: 'scatter',
+            mode: 'lines+markers'
+        }));
+    } else if (config.type === 'scatter') {
+        data = config.series.map(serie => ({
+            x: serie.data.map(d => d[0]),
+            y: serie.data.map(d => d[1]),
+            name: serie.name,
+            type: 'scatter',
+            mode: 'markers'
+        }));
+    }
+    
+    layout = {
+        title: {
+            text: config.title.text,
+            font: { size: 16 }
+        },
+        margin: { t: 50, r: 50, b: 50, l: 50 },
+        showlegend: config.type !== 'pie',
+        responsive: true
+    };
+    
+    // Configuração responsiva
+    const plotConfig = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+        displaylogo: false
+    };
+    
+    Plotly.newPlot(container, data, layout, plotConfig);
+    currentChart = { container, data, layout, config: plotConfig };
+}
+
+function mostrarEstado(estado) {
+    const estados = ['inicial', 'loading', 'grafico', 'erro'];
+    
+    estados.forEach(e => {
+        const elemento = document.getElementById(e === 'inicial' ? 'estado_inicial' : 
+                                               e === 'loading' ? 'loading_grafico' :
+                                               e === 'grafico' ? 'area_grafico' : 'erro_grafico');
+        elemento.style.display = e === estado ? 'block' : 'none';
+    });
+}
+
+function mostrarErro(mensagem) {
+    document.getElementById('texto_erro').textContent = mensagem;
+    mostrarEstado('erro');
+}
+
+function downloadChart(format) {
+    if (currentChart) {
+        Plotly.downloadImage(currentChart.container, {
+            format: format,
+            width: 1200,
+            height: 600,
+            filename: `grafico_{{ projeto.nome|replace(' ', '_') }}`
+        });
+    }
+}
+
+function resetZoom() {
+    if (currentChart) {
+        Plotly.relayout(currentChart.container, {
+            'xaxis.autorange': true,
+            'yaxis.autorange': true
+        });
+    }
+}
+</script>
+{% endblock %}
