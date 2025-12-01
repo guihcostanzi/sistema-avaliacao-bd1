@@ -195,6 +195,37 @@ def formatar_data_para_exibicao(data_str: str) -> str:
     except:
         return data_str
 
+def obter_valor_exibicao_entidade(db: Session, entidade_id: str) -> str:
+    """Obtém o valor de exibição de uma entidade"""
+    try:
+        partes = entidade_id.split('_')
+        if len(partes) != 2:
+            return f"Entidade {entidade_id}"
+        
+        estr_entidade_id = int(partes[0])
+        id_seq = int(partes[1])
+        
+        query = text("""
+            SELECT COALESCE(a.VALOR, CONCAT('Entidade ', :estr_entidade_id, '_', :id_seq)) as display_text
+            FROM ESTR_ATRIBUTOS ea
+            LEFT JOIN ATRIBUTOS a ON ea.ESTR_ENTIDADE_ID = a.ESTR_ENTIDADE_ID 
+                                AND ea.ID_SEQ = a.ESTR_ATRIBUTO_ID_SEQ 
+                                AND a.ENTIDADE_ID_SEQ = :id_seq
+            WHERE ea.ESTR_ENTIDADE_ID = :estr_entidade_id
+            AND ea.EXIBICAO = TRUE
+            LIMIT 1
+        """)
+        result = db.execute(query, {
+            "estr_entidade_id": estr_entidade_id,
+            "id_seq": id_seq
+        }).scalar()
+        
+        return result or f"Entidade {entidade_id}"
+        
+    except Exception as e:
+        print(f"Erro ao obter valor de exibição: {e}")
+        return f"Entidade {entidade_id}"
+
 def gerar_dados_pizza(db: Session, projeto_id: int, pergunta_id: str, perguntas_info: Dict) -> Dict[str, Any]:
     """Gera dados para gráfico de pizza"""
     
@@ -215,7 +246,13 @@ def gerar_dados_pizza(db: Session, projeto_id: int, pergunta_id: str, perguntas_
     series_data = []
     for valor, count in contador.most_common():
         # Formatar datas se necessário
-        valor_display = formatar_data_para_exibicao(valor) if pergunta_info.tipo == 'data' else str(valor)
+        if pergunta_info.tipo == 'data':
+            valor_display = formatar_data_para_exibicao(valor)
+        elif pergunta_info.tipo == 'entidade':
+            valor_display = obter_valor_exibicao_entidade(db, valor)
+        else:
+            valor_display = str(valor)
+            
         series_data.append({
             "name": valor_display,
             "data": count
@@ -282,6 +319,8 @@ def gerar_dados_barras(db: Session, projeto_id: int, pergunta_x: str, pergunta_y
         # Formatar chave para exibição
         if pergunta_x_info.tipo == 'data':
             x_display = formatar_data_para_exibicao(x_key)
+        elif pergunta_x_info.tipo == 'entidade':
+            x_display = obter_valor_exibicao_entidade(db, x_key)
         else:
             x_display = str(x_key)
         
@@ -371,6 +410,8 @@ def gerar_dados_linha(db: Session, projeto_id: int, pergunta_x: str, pergunta_y:
         # Formatar chave para exibição
         if pergunta_x_info.tipo == 'data':
             x_display = formatar_data_para_exibicao(x_key)
+        elif pergunta_x_info.tipo == 'entidade':
+            x_display = obter_valor_exibicao_entidade(db, x_key)
         else:
             x_display = str(x_key)
         
