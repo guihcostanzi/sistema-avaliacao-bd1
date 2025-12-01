@@ -398,7 +398,7 @@ def gerar_dados_linha(db: Session, projeto_id: int, pergunta_x: str, pergunta_y:
     return {
         "type": "line",
         "title": {
-            "text": f"{pergunta_x_info.pergunta} ao longo do tempo"
+            "text": f"{pergunta_x_info.pergunta} vs {y_label}"
         },
         "series": [{
             "name": y_label,
